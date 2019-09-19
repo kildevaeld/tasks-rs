@@ -13,3 +13,4 @@ pub use chain::*;
 pub use error::*;
 pub use task_ext::*;
 pub use middleware::*;
+pub use middleware_ext::*;
