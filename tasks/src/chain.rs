@@ -1,7 +1,7 @@
 use super::error::TaskError;
 use super::task::{ConditionalTask, Task};
 use super::utils::{OneOf3Future, Promise3};
-use futures::future::Ready;
+use futures_util::future::Ready;
 
 pub struct TaskChain<S1, S2> {
     s1: S1,
@@ -42,7 +42,7 @@ where
         } else if self.s2.can_exec(&ctx) {
             Promise3::Second(self.s2.exec(ctx))
         } else {
-            Promise3::Third(futures::future::err(Self::Error::from(
+            Promise3::Third(futures_util::future::err(Self::Error::from(
                 TaskError::InvalidRequest,
             )))
            

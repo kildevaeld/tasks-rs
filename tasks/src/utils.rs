@@ -1,6 +1,6 @@
-use futures::prelude::*;
 use std::pin::Pin;
 use std::task::{Poll, Context};
+use std::future::Future;
 
 pub enum Promise<T1, T2> {
     First(T1),

@@ -1,6 +1,6 @@
 use super::task::{Task, ConditionalTask};
 use std::sync::Arc;
-use futures::prelude::*;
+use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use super::utils::Promise;
