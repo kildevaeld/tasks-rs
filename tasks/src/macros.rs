@@ -4,10 +4,10 @@
 #[macro_export]
 macro_rules! task_fn {
     ($handler: expr) => {
-        $crate::task::TaskFn::new($handler)
+        $crate::TaskFn::new($handler)
     };
     ($handler: expr, $check: expr) => {
-        $crate::task::TaskFn::with_check($handler, $check)
+        $crate::TaskFn::with_check($handler, $check)
     };
 }
 
@@ -15,7 +15,7 @@ macro_rules! task_fn {
 #[macro_export]
 macro_rules! middleware_fn {
     ($handler: expr) => {
-        $crate::middleware::MiddlewareFn::new($handler)
+        $crate::MiddlewareFn::new($handler)
     };
 }
 
