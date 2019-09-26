@@ -43,7 +43,7 @@ where
         let f = self.f.clone();
         let fut = rx.then(move |req| match req {
             Ok(req) => f.execute(req, next),
-            Err(e) => panic!("error {}", e),
+            Err(e) => panic!("reciever channel closed: {}", e),
         });
 
         let fut2 = self.s.execute(req, n);
@@ -93,6 +93,11 @@ where
     fn poll(mut self: Pin<&mut Self>, waker: &mut Context<'_>) -> Poll<Self::Output> {
         let state = self.state;
 
+        match self.as_mut().f().poll(waker) {
+            Poll::Pending => {},
+            Poll::Ready(m) => return Poll::Ready(m)
+        }
+
         match state {
             State::Exec => match self.as_mut().s().poll(waker) {
                 Poll::Pending => {}
@@ -108,7 +113,7 @@ where
             State::Done => panic!("already exhusted"),
         };
 
-        self.as_mut().f().poll(waker)
+        Poll::Pending
     }
 }
 
@@ -151,7 +156,10 @@ where
         let f = self.h.clone();
         let fut = rx.then(move |req| match req {
             Ok(req) => f.exec(req),
-            Err(e) => panic!("error {}", e),
+            Err(e) => {
+                // The channel was closed, which means the sender was dropped
+                panic!("channel was closed: {}", e);
+            }
         });
 
         let fut2 = self.m.execute(req, n);
@@ -209,20 +217,20 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::super::error::TaskError;
     use super::super::middleware::*;
     use super::super::task::*;
     use super::*;
-    use futures_util::future::*;
+
+    use super::super::*;
 
     #[test]
     fn test_task_pipe() {
-        let s = middleware_fn(|input: i32, next: Next<i32, i32, ()>| {
+        let s = middleware_fn!(|input: i32, next: Next<i32, i32, ()>| {
             let o = input + 1;
-            next.execute(o)
+            next.exec(o)
                 .then(|m| futures_util::future::ready(m.map(|m| m + 1)))
         })
-        .then(task_fn(|input: i32| futures_util::future::ok(input + 1)));
+        .then(task_fn!(|input: i32| futures_util::future::ok(input + 1)));
 
         let ret = futures_executor::block_on(s.exec(1));
         assert_eq!(ret, Ok(4));
@@ -230,13 +238,13 @@ mod tests {
 
     #[test]
     fn test_task_pipe_no_next() {
-        let s = middleware_fn(|input: i32, next: Next<i32, i32, ()>| {
+        let s = middleware_fn!(|input: i32, _next: Next<i32, i32, ()>| {
             let o = input + 1;
             // next.execute(o)
             //     .then(|m| futures_util::future::ready(m.map(|m| m + 1)))
             futures_util::future::ok(o)
         })
-        .then(task_fn(|input: i32| futures_util::future::ok(input + 1)));
+        .then(task_fn!(|input: i32| futures_util::future::ok(input + 1)));
 
         let ret = futures_executor::block_on(s.exec(1));
         assert_eq!(ret, Ok(2));

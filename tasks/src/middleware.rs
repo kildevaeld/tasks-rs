@@ -1,11 +1,10 @@
 use futures_channel::oneshot::{channel, Receiver, Sender};
+use pin_utils::unsafe_pinned;
 use std::error::Error;
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use pin_utils::unsafe_pinned;
-
 
 pub struct Next<Req, Res, Err> {
     ret: Receiver<Result<Res, Err>>,
@@ -26,7 +25,7 @@ impl<Req, Res, Err> Next<Req, Res, Err> {
         )
     }
 
-    pub fn execute(self, req: Req) -> NextFuture<Res, Err> {
+    pub fn exec(self, req: Req) -> NextFuture<Res, Err> {
         if self.send.send(req).is_err() {
             // NextFuture { inner: None }
             panic!("should not happen");
@@ -47,33 +46,15 @@ impl<Res, Err> NextFuture<Res, Err> {
     }
 }
 
-
-
-
 impl<Res, Err> Future for NextFuture<Res, Err> {
-    
     type Output = Result<Res, Err>;
 
     fn poll(mut self: Pin<&mut Self>, waker: &mut Context<'_>) -> Poll<Self::Output> {
-        // let this = self.as_mut();
-        //let this = unsafe { Pin::get_unchecked_mut(self) };
-
         match self.as_mut().inner().poll(waker) {
             Poll::Pending => Poll::Pending,
             Poll::Ready(Ok(s)) => Poll::Ready(s),
-            Poll::Ready(Err(e)) => panic!("channel closed {:?}", e) 
+            Poll::Ready(Err(e)) => panic!("channel closed {:?}", e),
         }
-
-        // match &mut self.inner {
-        //     None => panic!("sould not be empty"),
-        //     Some(m) => match unsafe { Pin::new_unchecked(m) }.poll_unpin(waker) {
-        //         Poll::Pending => Poll::Pending,
-        //         Poll::Ready(res) => match res {
-        //             Ok(res) => Poll::Ready(res),
-        //             Err(err) => panic!("channel closed"),
-        //         },
-        //     },
-        // }
     }
 }
 
@@ -126,7 +107,7 @@ where
     type Output = T::Output;
     type Error = T::Error;
     type Future = T::Future;
-    type Middleware= T;
+    type Middleware = T;
     fn into_middleware(self) -> Self::Middleware {
         self
     }
@@ -158,6 +139,21 @@ pub struct MiddlewareFn<F, I, O, E> {
     _e: PhantomData<E>,
 }
 
+impl<F, I, O, E, U> MiddlewareFn<F, I, O, E>
+where
+    F: (Fn(I, Next<I, O, E>) -> U) + Send + Sync + std::marker::Unpin,
+    U: Future<Output = Result<O, E>> + Send + 'static,
+{
+    pub fn new(middleware: F) -> MiddlewareFn<F, I, O, E> {
+        MiddlewareFn {
+            inner: middleware,
+            _i: PhantomData,
+            _o: PhantomData,
+            _e: PhantomData,
+        }
+    }
+}
+
 impl<F, I, O, E, U> Middleware for MiddlewareFn<F, I, O, E>
 where
     F: (Fn(I, Next<I, O, E>) -> U) + Send + Sync + std::marker::Unpin,
@@ -185,5 +181,3 @@ where
         _e: PhantomData,
     }
 }
-
-

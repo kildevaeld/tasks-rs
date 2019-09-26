@@ -35,10 +35,12 @@ mod tests {
     use super::super::task::*;
     use super::*;
 
+    use super::super::*;
+
     #[test]
     fn test_task_pipe() {
-        let s = task_fn(|_input: &str| futures_util::future::ok::<_, ()>(2000i32))
-            .pipe(task_fn(|input: i32| futures_util::future::ok(input + 2)));
+        let s = task_fn!(|_input: &str| futures_util::future::ok::<_, ()>(2000i32))
+            .pipe(task_fn!(|input: i32| futures_util::future::ok(input + 2)));
 
         let ret = futures_executor::block_on(s.exec("Hello, World!"));
         assert_eq!(ret, Ok(2002));
@@ -46,14 +48,14 @@ mod tests {
 
     #[test]
     fn test_conditional_task_or() {
-        let s = conditional_task_fn(
+        let s = task_fn!(
             |input: i32| futures_util::future::ok::<_, TaskError>(input + 1),
-            |&input| input == 1,
+            |&input| input == 1
         )
-        .or(conditional_task_fn(
+        .or(task_fn!(
             |input: i32| futures_util::future::ok::<_, TaskError>(input + 2),
-            |&input| input == 2,
-        ).pipe(task_fn(|input| {
+            |&input| input == 2
+        ).pipe(task_fn!(|input| {
             futures_util::future::ok::<_, TaskError>(input + 1)
         })));
 

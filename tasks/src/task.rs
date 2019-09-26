@@ -7,7 +7,6 @@ pub trait Task {
     type Future: Future<Output = Result<Self::Output, Self::Error>> + Send + 'static;
 
     fn exec(&self, input: Self::Input) -> Self::Future;
-
 }
 
 pub trait ConditionalTask: Task {
@@ -43,8 +42,6 @@ where
     }
 }
 
-
-
 pub trait IntoConditionalTask {
     type Input;
     type Output;
@@ -74,7 +71,6 @@ where
     }
 }
 
-
 pub struct TaskFn<F, I, O, E, C> {
     inner: F,
     _i: std::marker::PhantomData<I>,
@@ -82,6 +78,40 @@ pub struct TaskFn<F, I, O, E, C> {
     _e: std::marker::PhantomData<E>,
     check: C,
 }
+
+impl<F, I, O, E, U> TaskFn<F, I, O, E, ()>
+where
+    F: Fn(I) -> U,
+    U: Future<Output = Result<O, E>> + Send + 'static,
+{
+    pub fn new(service: F) -> TaskFn<F, I, O, E, ()> {
+        TaskFn {
+            inner: service,
+            _i: std::marker::PhantomData,
+            _o: std::marker::PhantomData,
+            _e: std::marker::PhantomData,
+            check: (),
+        }
+    }
+}
+
+impl<F, I, O, E, C, U> TaskFn<F, I, O, E, C>
+where
+    F: Fn(I) -> U,
+    U: Future<Output = Result<O, E>> + Send + 'static,
+    C: Fn(&I) -> bool,
+{
+    pub fn with_check(service: F, check: C) -> TaskFn<F, I, O, E, C> {
+        TaskFn {
+            inner: service,
+            _i: std::marker::PhantomData,
+            _o: std::marker::PhantomData,
+            _e: std::marker::PhantomData,
+            check,
+        }
+    }
+}
+
 
 impl<F, I, O, E, C, U> Task for TaskFn<F, I, O, E, C>
 where
@@ -109,34 +139,31 @@ where
     }
 }
 
-pub fn task_fn<F, I, O, E, U>(service: F) -> TaskFn<F, I, O, E, ()>
-where
-    F: Fn(I) -> U,
-    U: Future<Output = Result<O, E>> + Send + 'static,
-{
-    TaskFn {
-        inner: service,
-        _i: std::marker::PhantomData,
-        _o: std::marker::PhantomData,
-        _e: std::marker::PhantomData,
-        check: (),
-    }
-}
+// pub fn task_fn<F, I, O, E, U>(service: F) -> TaskFn<F, I, O, E, ()>
+// where
+//     F: Fn(I) -> U,
+//     U: Future<Output = Result<O, E>> + Send + 'static,
+// {
+//     TaskFn {
+//         inner: service,
+//         _i: std::marker::PhantomData,
+//         _o: std::marker::PhantomData,
+//         _e: std::marker::PhantomData,
+//         check: (),
+//     }
+// }
 
-pub fn conditional_task_fn<F, I, O, E, U, C: 'static>(
-    service: F,
-    check: C,
-) -> TaskFn<F, I, O, E, C>
-where
-    F: Fn(I) -> U,
-    U: Future<Output = Result<O, E>> + Send + 'static,
-    C: Fn(&I) -> bool,
-{
-    TaskFn {
-        inner: service,
-        _i: std::marker::PhantomData,
-        _o: std::marker::PhantomData,
-        _e: std::marker::PhantomData,
-        check,
-    }
-}
+// pub fn conditional_task_fn<F, I, O, E, U, C: 'static>(service: F, check: C) -> TaskFn<F, I, O, E, C>
+// where
+//     F: Fn(I) -> U,
+//     U: Future<Output = Result<O, E>> + Send + 'static,
+//     C: Fn(&I) -> bool,
+// {
+//     TaskFn {
+//         inner: service,
+//         _i: std::marker::PhantomData,
+//         _o: std::marker::PhantomData,
+//         _e: std::marker::PhantomData,
+//         check,
+//     }
+// }
