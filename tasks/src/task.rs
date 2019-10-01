@@ -139,31 +139,3 @@ where
     }
 }
 
-// pub fn task_fn<F, I, O, E, U>(service: F) -> TaskFn<F, I, O, E, ()>
-// where
-//     F: Fn(I) -> U,
-//     U: Future<Output = Result<O, E>> + Send + 'static,
-// {
-//     TaskFn {
-//         inner: service,
-//         _i: std::marker::PhantomData,
-//         _o: std::marker::PhantomData,
-//         _e: std::marker::PhantomData,
-//         check: (),
-//     }
-// }
-
-// pub fn conditional_task_fn<F, I, O, E, U, C: 'static>(service: F, check: C) -> TaskFn<F, I, O, E, C>
-// where
-//     F: Fn(I) -> U,
-//     U: Future<Output = Result<O, E>> + Send + 'static,
-//     C: Fn(&I) -> bool,
-// {
-//     TaskFn {
-//         inner: service,
-//         _i: std::marker::PhantomData,
-//         _o: std::marker::PhantomData,
-//         _e: std::marker::PhantomData,
-//         check,
-//     }
-// }
