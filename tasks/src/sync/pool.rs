@@ -19,7 +19,7 @@ pub struct Pool<T> {
 impl<T> Pool<T> 
 
 where
-    T: SyncTask + Send + 'static,
+    T: SyncTask + Sync + Send + 'static,
     <T as SyncTask>::Input: Send,
     <T as SyncTask>::Output: Send + 'static,
     <T as SyncTask>::Error: From<TaskError> + Send
