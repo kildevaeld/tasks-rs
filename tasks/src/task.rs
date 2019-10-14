@@ -42,6 +42,7 @@ where
     }
 }
 
+
 pub trait IntoConditionalTask {
     type Input;
     type Output;
@@ -71,6 +72,7 @@ where
     }
 }
 
+#[derive(Clone)]
 pub struct TaskFn<F, I, O, E, C> {
     inner: F,
     _i: std::marker::PhantomData<I>,
