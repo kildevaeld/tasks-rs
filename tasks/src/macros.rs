@@ -81,6 +81,25 @@ macro_rules! stack {
      };
 }
 
+#[cfg(feature = "sync")]
+#[macro_export]
+macro_rules! pool {
+    ($size: expr, $func: expr) => {
+        $crate::sync::Pool::new($size, $func)
+    };
+}
+
+#[cfg(feature = "sync")]
+#[macro_export]
+macro_rules! sync_task_fn {
+    ($handler: expr) => {
+        $crate::sync::SyncTaskFn::new($handler)
+    };
+    ($handler: expr, $check: expr) => {
+        $crate::sync::SyncTaskFn::with_check($handler, $check)
+    };
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -112,6 +131,13 @@ mod tests {
         let ans = futures_executor::block_on(chain.exec("Hello!"));
 
         assert_eq!(ans.unwrap(), 42);
+    }
+
+    #[test]
+    fn test_pool() {
+        let pool = pool!(2, sync_task_fn!(|test| Result::<_, TaskError>::Ok(test + 2)));
+
+        let ans = futures_executor::block_on(pool.exec(2));
     }
 
 }
