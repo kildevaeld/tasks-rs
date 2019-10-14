@@ -4,6 +4,7 @@ use super::pool::Pool;
 use num_cpus;
 use super::pipe::SyncPipe;
 use super::either::Either;
+use crate::error::TaskError;
 
 pub trait SyncTaskExt: SyncTask + Sized {
     fn into_async(self, threadpool: Option<ThreadPool>) ->  Pool<Self>;
@@ -11,7 +12,14 @@ pub trait SyncTaskExt: SyncTask + Sized {
 }
 
 
-impl<T> SyncTaskExt for T where T: SyncTask {
+impl<T> SyncTaskExt for T 
+where 
+    T: SyncTask + Clone + Send + 'static,
+    <T as SyncTask>::Input: Send,
+    <T as SyncTask>::Output: Send,
+    <T as SyncTask>::Error: From<TaskError> + Send
+    
+     {
     fn into_async(self, threadpool: Option<ThreadPool>) -> Pool<Self> {
         match threadpool {
             Some(tp) => Pool::with_pool(tp, self),
