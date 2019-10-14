@@ -9,7 +9,7 @@ mod middleware_ext;
 
 
 #[cfg(feature = "sync")]
-mod sync;
+pub mod sync;
 
 #[macro_use]
 pub mod macros;
