@@ -13,13 +13,13 @@ use super::task::{SyncTask, ConditionalSyncTask};
 #[derive(Clone)]
 pub struct Pool<T> {
     tp: ThreadPool,
-    task: T
+    task: std::sync::Arc<T>
 }
 
 impl<T> Pool<T> 
 
 where
-    T: SyncTask + Clone + Send + 'static,
+    T: SyncTask + Send + 'static,
     <T as SyncTask>::Input: Send,
     <T as SyncTask>::Output: Send + 'static,
     <T as SyncTask>::Error: From<TaskError> + Send
@@ -33,14 +33,14 @@ where
     pub fn with_pool(pool: ThreadPool, task: T) -> Pool<T> {
         Pool {
             tp: pool,
-            task
+            task: std::sync::Arc::new(task),
         }
     }
 }
 
 impl<T> Task for Pool<T>
 where
-    T: SyncTask + Clone + Send + 'static,
+    T: SyncTask + Sync + Send + 'static,
     <T as SyncTask>::Input: Send,
     <T as SyncTask>::Output: Send + 'static,
     <T as SyncTask>::Error: From<TaskError> + Send
@@ -66,7 +66,7 @@ where
 
 impl<T> ConditionalTask for Pool<T> 
 where
-    T: ConditionalSyncTask + Clone + Send + 'static,
+    T: ConditionalSyncTask + Sync + Send + 'static,
     <T as SyncTask>::Input: Send,
     <T as SyncTask>::Output: Send + 'static,
     <T as SyncTask>::Error: From<TaskError> + Send
