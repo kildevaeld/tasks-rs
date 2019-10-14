@@ -16,7 +16,15 @@ pub struct Pool<T> {
     task: T
 }
 
-impl<T> Pool<T> {
+impl<T> Pool<T> 
+
+where
+    T: SyncTask + Clone + Send + 'static,
+    <T as SyncTask>::Input: Send,
+    <T as SyncTask>::Output: Send + 'static,
+    <T as SyncTask>::Error: From<TaskError> + Send
+{
+    
     pub fn new(size: usize, task: T) -> Pool<T> {
         let tp = ThreadPool::new(size);
         Self::with_pool(tp, task)
