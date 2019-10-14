@@ -6,58 +6,9 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use threadpool::ThreadPool;
-use super::task::SyncTask;
+use super::task::{SyncTask, ConditionalSyncTask};
 
 
-
-// pub struct Pool<T> {
-//     tp: ThreadPool,
-//     func: Arc<F>,
-//     _i: PhantomData<I>,
-//     _o: PhantomData<O>,
-//     _e: PhantomData<E>,
-// }
-
-// impl<F, I, O, E> Pool<F, I, O, E> {
-//     pub fn new(size: usize, func: F) -> Pool<F, I, O, E> {
-//         let tp = ThreadPool::new(size);
-//         Self::with_pool(tp, func)
-//     }
-
-//     pub fn with_pool(pool: ThreadPool, func: F) -> Pool<F, I, O, E> {
-//         Pool {
-//             tp: pool,
-//             func: Arc::new(func),
-//             _i: PhantomData,
-//             _o: PhantomData,
-//             _e: PhantomData,
-//         }
-//     }
-// }
-
-// impl<F, I, O, E: std::error::Error> Task for Pool<F, I, O, E>
-// where
-//     F: (Fn(I) -> Result<O, E>) + Send + Sync + 'static,
-//     O: Send + 'static,
-//     I: Send + 'static,
-//     E: Send + 'static + From<TaskError>,
-// {
-//     type Input = I;
-//     type Output = O;
-//     type Error = E;
-//     type Future = ChannelReceiverFuture<O, E>;
-
-//     fn exec(&self, input: I) -> Self::Future {
-//         let (sx, rx) = channel();
-//         let work = self.func.clone();
-//         self.tp.execute(move || {
-//             let result = work(input);
-//             sx.send(result);
-//         });
-
-//         ChannelReceiverFuture::new(rx)
-//     }
-// }
 
 #[derive(Clone)]
 pub struct Pool<T> {
@@ -96,10 +47,24 @@ where
         let work = self.task.clone();
         self.tp.execute(move || {
             let result = work.exec(input);
-            sx.send(result);
+            if let Err(_) = sx.send(result) { 
+                
+            }
         });
 
         ChannelReceiverFuture::new(rx)
+    }
+}
+
+impl<T> ConditionalTask for Pool<T> 
+where
+    T: ConditionalSyncTask + Clone + Send + 'static,
+    <T as SyncTask>::Input: Send,
+    <T as SyncTask>::Output: Send + 'static,
+    <T as SyncTask>::Error: From<TaskError> + Send
+{
+    fn can_exec(&self, input: &Self::Input) -> bool {
+        self.task.can_exec(input)
     }
 }
 

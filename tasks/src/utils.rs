@@ -12,6 +12,7 @@ pub struct OneOf2Future<T1: Future<Output = V>, T2: Future<Output = V>, V> {
 }
 
 impl<T1: Future<Output = V>, T2: Future<Output = V>, V> OneOf2Future<T1, T2, V> {
+    
     pub fn new(future: Promise<T1, T2>) -> OneOf2Future<T1, T2, V> {
         OneOf2Future { inner: future }
     }
