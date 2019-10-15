@@ -7,12 +7,13 @@ mod task_ext;
 mod middleware;
 mod middleware_ext;
 
+#[macro_use]
+pub mod macros;
 
 #[cfg(feature = "sync")]
 pub mod sync;
 
-#[macro_use]
-pub mod macros;
+
 
 pub use pipe::*;
 pub use task::*;

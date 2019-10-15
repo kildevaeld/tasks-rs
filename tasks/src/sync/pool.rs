@@ -22,7 +22,7 @@ where
     T: SyncTask + Sync + Send + 'static,
     <T as SyncTask>::Input: Send,
     <T as SyncTask>::Output: Send + 'static,
-    <T as SyncTask>::Error: From<TaskError> + Send
+    <T as SyncTask>::Error: From<TaskError> + Send + 'static
 {
     
     pub fn new(size: usize, task: T) -> Pool<T> {
@@ -43,7 +43,7 @@ where
     T: SyncTask + Sync + Send + 'static,
     <T as SyncTask>::Input: Send,
     <T as SyncTask>::Output: Send + 'static,
-    <T as SyncTask>::Error: From<TaskError> + Send
+    <T as SyncTask>::Error: From<TaskError> + Send + 'static
 {
     type Input = T::Input;
     type Output = T::Output;
