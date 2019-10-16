@@ -110,7 +110,10 @@ where
                     };
                 }
             },
-            State::Done => panic!("already exhusted"),
+            State::Done => {
+
+                ()
+            },
         };
 
         Poll::Pending
@@ -249,5 +252,44 @@ mod tests {
         let ret = futures_executor::block_on(s.exec(1));
         assert_eq!(ret, Ok(2));
     }
+
+
+    #[test]
+    fn test_task_pipe_multiple() {
+        let s = middleware_fn!(|input: i32, next: Next<i32, i32, ()>| {
+            let o = input + 1;
+            next.exec(o)
+             .then(|m| futures_util::future::ready(m.map(|m| m + 1)))
+           
+        })
+        .stack(middleware_fn!(|input: i32, next: Next<i32, i32, ()>| {
+            let o = input + 1;
+            next.exec(o)
+             .then(|m| futures_util::future::ready(m.map(|m| m + 1)))
+        }))
+        .then(task_fn!(|input: i32| futures_util::future::ok(input + 1)));
+
+        let ret = futures_executor::block_on(s.exec(1));
+        assert_eq!(ret, Ok(6));
+    }
+
+
+    #[test]
+    fn test_task_pipe_multiple_no_next() {
+        let s = middleware_fn!(|input: i32, next: Next<i32, i32, ()>| {
+            let o = input + 1;
+            next.exec(o)
+             .then(|m| futures_util::future::ready(m.map(|m| m + 1)))
+           
+        })
+        .stack(middleware_fn!(|input: i32, next: Next<i32, i32, ()>| {
+            futures_util::future::ok(input + 1)
+        }))
+        .then(task_fn!(|input: i32| futures_util::future::ok(input + 1)));
+
+        let ret = futures_executor::block_on(s.exec(1));
+        assert_eq!(ret, Ok(5));
+    }
+
 
 }

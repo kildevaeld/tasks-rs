@@ -133,6 +133,7 @@ mod tests {
         assert_eq!(ans.unwrap(), 42);
     }
 
+    #[cfg(feature = "sync")]
     #[test]
     fn test_pool() {
         let pool = pool!(2, sync_task_fn!(|test| Result::<_, TaskError>::Ok(test + 2)));
