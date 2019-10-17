@@ -8,7 +8,7 @@ use std::task::{Context, Poll};
 
 pub struct Next<Req, Res, Err> {
     ret: Receiver<Result<Res, Err>>,
-    send: Sender<Req>,
+    pub(crate) send: Sender<Req>,
 }
 
 impl<Req, Res, Err> Next<Req, Res, Err> {
