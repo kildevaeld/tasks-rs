@@ -296,7 +296,6 @@ where
                 MiddlewareHandlerFutureState::Middleware1(mut fut, sx, mut rx) => {
                     match unsafe { Pin::new_unchecked(&mut fut) }.poll(cx) {
                         Poll::Pending => {
-                            println!("print");
                         }
                         Poll::Ready(Ok(ret)) => return Poll::Ready(Ok(ret)),
                         Poll::Ready(Err(err)) => return Poll::Ready(Err(err)),
