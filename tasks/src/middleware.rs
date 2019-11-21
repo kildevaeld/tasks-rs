@@ -1,5 +1,4 @@
 use futures_channel::oneshot::{channel, Receiver, Sender};
-use pin_utils::unsafe_pinned;
 use std::error::Error;
 use std::fmt;
 use std::future::Future;

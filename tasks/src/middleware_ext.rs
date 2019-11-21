@@ -356,7 +356,6 @@ mod tests {
     use super::super::task::*;
     use super::*;
     use futures_util::future::FutureExt;
-    use pin_utils::unsafe_pinned;
 
     use super::super::*;
 

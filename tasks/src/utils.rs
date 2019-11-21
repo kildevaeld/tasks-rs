@@ -25,11 +25,12 @@ impl<T1: Future<Output = V>, T2: Future<Output = V>, V> OneOf2Future<T1, T2, V> 
 impl<T1: Future<Output = V>, T2: Future<Output = V>, V> Future for OneOf2Future<T1, T2, V> {
     type Output = V;
     fn poll(self: Pin<&mut Self>, waker: &mut Context) -> Poll<Self::Output> {
-        let this = self.project(); //. unsafe { Pin::get_unchecked_mut(self) };
-
-        match this.inner.project() {
-            Promise::First(fut) => unsafe { Pin::new_unchecked(fut) }.poll(waker),
-            Promise::Second(fut) => unsafe { Pin::new_unchecked(fut) }.poll(waker),
+        //let this = self.project();
+        let inner = self.project().inner.project();
+        
+        match inner {
+            __PromiseProjection::First(fut) => fut.poll(waker),
+            __PromiseProjection::Second(fut) => fut.poll(waker),
         }
     }
 }
