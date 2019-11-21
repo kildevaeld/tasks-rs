@@ -1,7 +1,7 @@
-use super::either::Either;
+use super::either::EitherSync;
 use super::pipe::SyncPipe;
 use super::pool::Pool;
-use super::task::{ConditionalSyncTask, IntoConditionalSyncTask, IntoSyncTask, SyncTask};
+use super::task::{IntoSyncTask, SyncTask};
 use crate::error::TaskError;
 use num_cpus;
 use threadpool::ThreadPool;
@@ -16,6 +16,15 @@ pub trait SyncTaskExt: SyncTask + Sized {
             s1: self,
             s2: next.into_task(),
         }
+    }
+
+    fn or<
+        S: IntoSyncTask<Input = Self::Input, Output = Self::Output, Error = Self::Error>,
+    >(
+        self,
+        service: S,
+    ) -> EitherSync<Self, S::Task> {
+        EitherSync::new(self, service.into_task())
     }
 }
 
@@ -34,18 +43,7 @@ where
     }
 }
 
-pub trait ConditionalSyncTaskExt: ConditionalSyncTask + Sized {
-    fn or<
-        S: IntoConditionalSyncTask<Input = Self::Input, Output = Self::Output, Error = Self::Error>,
-    >(
-        self,
-        service: S,
-    ) -> Either<Self, S::Task> {
-        Either::new(self, service.into_task())
-    }
-}
 
-impl<T> ConditionalSyncTaskExt for T where T: ConditionalSyncTask {}
 
 #[cfg(test)]
 mod tests {

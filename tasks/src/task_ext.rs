@@ -1,6 +1,6 @@
-use super::chain::TaskChain;
+use super::either::Either;
 use super::pipe::Pipe;
-use super::task::{ConditionalTask, IntoConditionalTask, IntoTask, Task};
+use super::task::{ IntoTask, Task};
 use std::sync::Arc;
 
 pub trait TaskExt: Task + Sized {
@@ -10,22 +10,18 @@ pub trait TaskExt: Task + Sized {
             s2: Arc::new(service.into_task()),
         }
     }
-}
 
-impl<T> TaskExt for T where T: Task {}
-
-pub trait ConditionalTaskExt: ConditionalTask + Sized {
     fn or<
-        S: IntoConditionalTask<Input = Self::Input, Output = Self::Output, Error = Self::Error>,
+        S: IntoTask<Input = Self::Input, Output = Self::Output, Error = Self::Error>,
     >(
         self,
         service: S,
-    ) -> TaskChain<Self, S::Task> {
-        TaskChain::new(self, service.into_task())
+    ) -> Either<Self, S::Task> {
+        Either::new(self, service.into_task())
     }
 }
 
-impl<T> ConditionalTaskExt for T where T: ConditionalTask {}
+impl<T> TaskExt for T where T: Task {}
 
 
 

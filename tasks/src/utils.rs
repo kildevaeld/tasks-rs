@@ -1,13 +1,17 @@
 use std::pin::Pin;
 use std::task::{Poll, Context};
 use std::future::Future;
+use pin_project::pin_project;
 
+#[pin_project]
 pub enum Promise<T1, T2> {
-    First(T1),
-    Second(T2),
+    First(#[pin] T1),
+    Second(#[pin] T2),
 }
 
+#[pin_project]
 pub struct OneOf2Future<T1: Future<Output = V>, T2: Future<Output = V>, V> {
+    #[pin]
     inner: Promise<T1, T2>,
 }
 
@@ -21,9 +25,9 @@ impl<T1: Future<Output = V>, T2: Future<Output = V>, V> OneOf2Future<T1, T2, V> 
 impl<T1: Future<Output = V>, T2: Future<Output = V>, V> Future for OneOf2Future<T1, T2, V> {
     type Output = V;
     fn poll(self: Pin<&mut Self>, waker: &mut Context) -> Poll<Self::Output> {
-        let this = unsafe { Pin::get_unchecked_mut(self) };
+        let this = self.project(); //. unsafe { Pin::get_unchecked_mut(self) };
 
-        match &mut this.inner {
+        match this.inner.project() {
             Promise::First(fut) => unsafe { Pin::new_unchecked(fut) }.poll(waker),
             Promise::Second(fut) => unsafe { Pin::new_unchecked(fut) }.poll(waker),
         }

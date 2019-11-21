@@ -4,10 +4,10 @@
 #[macro_export]
 macro_rules! task_fn {
     ($handler: expr) => {
-        $crate::TaskFn::new($handler)
+        $crate::TaskFn::new($handler, |_| true)
     };
     ($handler: expr, $check: expr) => {
-        $crate::TaskFn::with_check($handler, $check)
+        $crate::TaskFn::new($handler, $check)
     };
 }
 
@@ -93,7 +93,7 @@ macro_rules! pool {
 #[macro_export]
 macro_rules! sync_task_fn {
     ($handler: expr) => {
-        $crate::sync::SyncTaskFn::new($handler)
+        $crate::sync::SyncTaskFn::new($handler, |_| true)
     };
     ($handler: expr, $check: expr) => {
         $crate::sync::SyncTaskFn::with_check($handler, $check)

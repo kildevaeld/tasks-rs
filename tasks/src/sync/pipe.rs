@@ -1,4 +1,4 @@
-use super::task::{SyncTask, ConditionalSyncTask};
+use super::task::{SyncTask};
 
 pub struct SyncPipe<S1, S2> {
     pub(crate) s1: S1,
@@ -21,18 +21,23 @@ where
         }
     }
 
-}
-
-
-impl<S1, S2> ConditionalSyncTask for SyncPipe<S1, S2>
-where
-    S1: ConditionalSyncTask,
-    S2: SyncTask<Input = <S1 as SyncTask>::Output, Error = <S1 as SyncTask>::Error>
-{
-    
     fn can_exec(&self, input: &Self::Input) ->bool {
         self.s1.can_exec(input)
     }
 
+
 }
+
+
+// impl<S1, S2> ConditionalSyncTask for SyncPipe<S1, S2>
+// where
+//     S1: ConditionalSyncTask,
+//     S2: SyncTask<Input = <S1 as SyncTask>::Output, Error = <S1 as SyncTask>::Error>
+// {
+    
+//     fn can_exec(&self, input: &Self::Input) ->bool {
+//         self.s1.can_exec(input)
+//     }
+
+// }
 

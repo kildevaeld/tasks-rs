@@ -1,7 +1,7 @@
 mod pipe;
 mod task;
 pub mod utils;
-mod chain;
+mod either;
 mod error;
 mod task_ext;
 mod middleware;
@@ -17,7 +17,7 @@ pub mod sync;
 
 pub use pipe::*;
 pub use task::*;
-pub use chain::*;
+pub use either::*;
 pub use error::*;
 pub use task_ext::*;
 pub use middleware::*;

@@ -5,6 +5,7 @@ use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
+use pin_project::pin_project;
 
 pub struct Next<Req, Res, Err> {
     ret: Receiver<Result<Res, Err>>,
@@ -35,12 +36,14 @@ impl<Req, Res, Err> Next<Req, Res, Err> {
     }
 }
 
+#[pin_project]
 pub struct NextFuture<Res, Err> {
+    #[pin]
     pub(crate) inner: Receiver<Result<Res, Err>>,
 }
 
 impl<Res, Err> NextFuture<Res, Err> {
-    unsafe_pinned!(inner: Receiver<Result<Res, Err>>);
+    //unsafe_pinned!(inner: Receiver<Result<Res, Err>>);
     pub fn new(chan: Receiver<Result<Res, Err>>) -> NextFuture<Res, Err> {
         NextFuture { inner: chan }
     }
@@ -50,7 +53,8 @@ impl<Res, Err> Future for NextFuture<Res, Err> {
     type Output = Result<Res, Err>;
 
     fn poll(mut self: Pin<&mut Self>, waker: &mut Context<'_>) -> Poll<Self::Output> {
-        match self.as_mut().inner().poll(waker) {
+        let this = self.project();
+        match this.inner.poll(waker) {
             Poll::Pending => Poll::Pending,
             Poll::Ready(Ok(s)) => Poll::Ready(s),
             Poll::Ready(Err(e)) => panic!("channel closed {:?}", e),

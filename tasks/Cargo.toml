@@ -13,10 +13,11 @@ futures-channel = "0.3"
 pin-utils = "0.1.0-alpha.4"
 threadpool = { version = "^1.7", optional = true }
 num_cpus = { version = "1", optional = true }
+pin-project = "0.4"
 
 [dev-dependencies]
 futures-executor-preview = "=0.3.0-alpha.19"
 
 [features]
-default = []
+default = ["sync"]
 sync = ["threadpool", "num_cpus"]

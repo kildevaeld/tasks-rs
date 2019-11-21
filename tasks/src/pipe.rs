@@ -1,4 +1,4 @@
-use super::task::{Task, ConditionalTask};
+use super::task::{Task};
 use std::sync::Arc;
 use std::future::Future;
 use std::pin::Pin;
@@ -26,32 +26,16 @@ where
     type Error = S1::Error;
     type Output = S2::Output;
     type Future = PipeFuture<<S1 as Task>::Future, S2, S1::Output, Self::Error>;
+    
     fn exec(&self, input: Self::Input) -> Self::Future {
         PipeFuture::new(self.s1.exec(input), &self.s2)
     }
 
-}
-
-
-impl<S1, S2> ConditionalTask for Pipe<S1, S2>
-where
-    S1: ConditionalTask,
-    S2: Task<Input = <S1 as Task>::Output, Error = <S1 as Task>::Error>
-        + 'static
-        + Send
-        + Sync,
-    <S1 as Task>::Output: 'static,
-    <S1 as Task>::Error: Send + 'static,
-    <S2 as Task>::Future: Send + 'static,
-{
-    
-    fn can_exec(&self, input: &Self::Input) ->bool {
+    fn can_exec(&self, input: &Self::Input) -> bool {
         self.s1.can_exec(input)
     }
 
 }
-
-
 
 pub struct PipeFuture<F: Future<Output = Result<V, E>>, T: Task<Input = V, Error = E>, V, E> {
     current: Promise<F, <T as Task>::Future>,

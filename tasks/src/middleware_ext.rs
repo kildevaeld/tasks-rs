@@ -1,5 +1,5 @@
 use super::middleware::{IntoMiddleware, Middleware, Next};
-use super::task::{ConditionalTask, IntoTask, Task};
+use super::task::{IntoTask, Task};
 use futures_channel::oneshot::{Receiver, Sender};
 use std::future::Future;
 use std::pin::Pin;
@@ -78,27 +78,31 @@ where
     fn exec(&self, req: Self::Input) -> Self::Future {
         MiddlewareHandlerFuture::new(self.m.clone(), self.h.clone(), req)
     }
-}
 
-impl<M, H> ConditionalTask for MiddlewareHandler<M, H>
-where
-    M: Middleware + 'static + Sync + Send,
-    H: ConditionalTask<
-            Input = <M as Middleware>::Input,
-            Output = <M as Middleware>::Output,
-            Error = <M as Middleware>::Error,
-        > + Send
-        + Sync
-        + 'static,
-    <M as Middleware>::Input: Send + 'static,
-    <M as Middleware>::Output: Send + 'static,
-    <M as Middleware>::Error: Send + 'static,
-    <H as Task>::Future: Send + Sync,
-{
     fn can_exec(&self, input: &Self::Input) -> bool {
         self.h.can_exec(input)
     }
 }
+
+// impl<M, H> ConditionalTask for MiddlewareHandler<M, H>
+// where
+//     M: Middleware + 'static + Sync + Send,
+//     H: ConditionalTask<
+//             Input = <M as Middleware>::Input,
+//             Output = <M as Middleware>::Output,
+//             Error = <M as Middleware>::Error,
+//         > + Send
+//         + Sync
+//         + 'static,
+//     <M as Middleware>::Input: Send + 'static,
+//     <M as Middleware>::Output: Send + 'static,
+//     <M as Middleware>::Error: Send + 'static,
+//     <H as Task>::Future: Send + Sync,
+// {
+//     fn can_exec(&self, input: &Self::Input) -> bool {
+//         self.h.can_exec(input)
+//     }
+// }
 
 pub trait MiddlewareExt: Middleware + Sized {
     fn stack<M: IntoMiddleware>(self, other: M) -> MiddlewareChain<Self, M::Middleware>;
