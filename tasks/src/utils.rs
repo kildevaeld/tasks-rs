@@ -25,7 +25,6 @@ impl<T1: Future<Output = V>, T2: Future<Output = V>, V> OneOf2Future<T1, T2, V> 
 impl<T1: Future<Output = V>, T2: Future<Output = V>, V> Future for OneOf2Future<T1, T2, V> {
     type Output = V;
     fn poll(self: Pin<&mut Self>, waker: &mut Context) -> Poll<Self::Output> {
-        //let this = self.project();
         let inner = self.project().inner.project();
         
         match inner {
