@@ -6,12 +6,12 @@ use pin_project::pin_project;
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use threadpool::ThreadPool;
-use std::sync::{Mutex, Arc};
+use rayon::{ThreadPoolBuilder, ThreadPool};
+use std::sync::{Arc};
 
 #[derive(Clone)]
 pub struct Pool<T> {
-    tp: Arc<Mutex<ThreadPool>>,
+    tp: Arc<ThreadPool>,
     task: Arc<T>,
 }
 
@@ -22,14 +22,14 @@ where
     <T as SyncTask>::Output: Send + 'static,
     <T as SyncTask>::Error: From<TaskError> + Send + 'static,
 {
-    pub fn new(size: usize, task: T) -> Pool<T> {
-        let tp = ThreadPool::new(size);
-        Self::with_pool(tp, task)
+    pub fn new(size: usize, task: T) -> Result<Pool<T>, Box<dyn std::error::Error>> {
+        let tp = ThreadPoolBuilder::new().num_threads(size).build()?;
+        Ok(Self::with_pool(tp, task))
     }
 
     pub fn with_pool(pool: ThreadPool, task: T) -> Pool<T> {
         Pool {
-            tp: Arc::new(Mutex::new(pool)),
+            tp: Arc::new(pool),
             task: Arc::new(task),
         }
     }
@@ -50,7 +50,7 @@ where
     fn exec(&self, input: Self::Input) -> Self::Future {
         let (sx, rx) = channel();
         let work = self.task.clone();
-        self.tp.lock().unwrap().execute(move || {
+        self.tp.install(move || {
             let result = work.exec(input);
             if let Err(_) = sx.send(result) {}
         });

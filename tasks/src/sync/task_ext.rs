@@ -4,10 +4,10 @@ use super::pool::Pool;
 use super::task::{IntoSyncTask, SyncTask};
 use crate::error::TaskError;
 use num_cpus;
-use threadpool::ThreadPool;
+use rayon::ThreadPool;
 
 pub trait SyncTaskExt: SyncTask + Sized {
-    fn into_async(self, threadpool: Option<ThreadPool>) -> Pool<Self>;
+    fn into_async(self, threadpool: Option<ThreadPool>) -> Result<Pool<Self>, TaskError>;
     fn pipe<T: IntoSyncTask<Input = Self::Output, Error = Self::Error>>(
         self,
         next: T,
@@ -18,9 +18,7 @@ pub trait SyncTaskExt: SyncTask + Sized {
         }
     }
 
-    fn or<
-        S: IntoSyncTask<Input = Self::Input, Output = Self::Output, Error = Self::Error>,
-    >(
+    fn or<S: IntoSyncTask<Input = Self::Input, Output = Self::Output, Error = Self::Error>>(
         self,
         service: S,
     ) -> EitherSync<Self, S::Task> {
@@ -35,22 +33,23 @@ where
     <T as SyncTask>::Output: Send,
     <T as SyncTask>::Error: From<TaskError> + Send,
 {
-    fn into_async(self, threadpool: Option<ThreadPool>) -> Pool<Self> {
+    fn into_async(
+        self,
+        threadpool: Option<ThreadPool>,
+    ) -> Result<Pool<Self>, TaskError> {
         match threadpool {
-            Some(tp) => Pool::with_pool(tp, self),
-            None => Pool::new(num_cpus::get(), self),
+            Some(tp) => Ok(Pool::with_pool(tp, self)),
+            None => Pool::new(num_cpus::get(), self).map_err(|_| TaskError::ThreadPoolError),
         }
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
 
     use super::super::SyncTask;
     use super::SyncTaskExt;
-    use crate::{TaskError, Task};
+    use crate::{Task, TaskError};
 
     #[test]
     fn test_sync_pipe() {
@@ -62,13 +61,12 @@ mod tests {
         assert_eq!(out, Ok(String::from("Hello, World Total Control")));
     }
 
-
-     #[test]
+    #[test]
     fn test_sync_pool() {
         let task = sync_task_fn!(|s: String| Result::<_, TaskError>::Ok(s + " Total"));
 
         let task = task.pipe(sync_task_fn!(|s: String| Ok(s + " Control")));
-        let pool = task.into_async(None);
+        let pool = task.into_async(None).unwrap();
 
         let result = futures_executor::block_on(pool.exec("Hello, World".to_string()));
 

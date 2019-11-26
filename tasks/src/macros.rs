@@ -41,13 +41,13 @@ macro_rules! pipe {
 }
 
 #[macro_export]
-macro_rules! chain {
+macro_rules! either {
     [ $y: expr, $( $x:expr ),* ] => {
         {
-            use $crate::ConditionalTaskExt;
+            use $crate::TaskExt;
             let m = $y;
             $(
-                let m = m.chain($x);
+                let m = m.or($x);
             )*
             m
         }
@@ -136,7 +136,7 @@ mod tests {
     #[cfg(feature = "sync")]
     #[test]
     fn test_pool() {
-        let pool = pool!(2, sync_task_fn!(|test| Result::<_, TaskError>::Ok(test + 2)));
+        let pool = pool!(2, sync_task_fn!(|test| Result::<_, TaskError>::Ok(test + 2))).unwrap();
 
         let ans = futures_executor::block_on(pool.exec(2));
     }

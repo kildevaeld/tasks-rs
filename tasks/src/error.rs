@@ -1,11 +1,16 @@
 use std::fmt;
 use std::error::Error;
+#[cfg(feature = "sync")]
+use rayon::ThreadPoolBuildError;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TaskError {
     ReceiverClosed,
     NullFuture,
     InvalidRequest,
+    #[cfg(feature = "sync")]
+    ThreadPoolError,
+
 }
 
 impl fmt::Display for TaskError {
