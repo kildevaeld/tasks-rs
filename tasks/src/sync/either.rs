@@ -12,22 +12,21 @@ impl<S1, S2> EitherSync<S1, S2> {
     }
 }
 
-impl<S1, S2> SyncTask for EitherSync<S1, S2>
+impl<S1, S2, I> SyncTask<I> for EitherSync<S1, S2>
 where
-    S1: SyncTask,
-    <S1 as SyncTask>::Output: Send + 'static,
-    <S1 as SyncTask>::Error: Send + 'static + From<TaskError>,
+    S1: SyncTask<I>,
+    <S1 as SyncTask<I>>::Output: Send + 'static,
+    <S1 as SyncTask<I>>::Error: Send + 'static + From<TaskError>,
     S2: SyncTask<
-        Input = <S1 as SyncTask>::Input,
-        Output = <S1 as SyncTask>::Output,
-        Error = <S1 as SyncTask>::Error,
+        I,
+        Output = <S1 as SyncTask<I>>::Output,
+        Error = <S1 as SyncTask<I>>::Error,
     >,
 {
-    type Input = S1::Input;
     type Output = S1::Output;
     type Error = S1::Error;
 
-    fn exec(&self, ctx: Self::Input) -> Result<Self::Output, Self::Error> {
+    fn exec(&self, ctx: I) -> Result<Self::Output, Self::Error> {
         if self.s1.can_exec(&ctx) {
             self.s1.exec(ctx)
         } else if self.s2.can_exec(&ctx) {
@@ -38,7 +37,7 @@ where
     }
 
     #[inline]
-    fn can_exec(&self, ctx: &Self::Input) -> bool {
+    fn can_exec(&self, ctx: &I) -> bool {
         self.s1.can_exec(ctx) || self.s2.can_exec(ctx)
     }
 }

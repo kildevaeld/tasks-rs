@@ -10,44 +10,43 @@ use rayon::{ThreadPoolBuilder, ThreadPool};
 use std::sync::{Arc};
 
 #[derive(Clone)]
-pub struct Pool<T> {
+pub struct Pool<T, INPUT> {
     tp: Arc<ThreadPool>,
     task: Arc<T>,
+    _i: std::marker::PhantomData<INPUT>
 }
 
-impl<T> Pool<T>
+impl<T, INPUT> Pool<T, INPUT>
 where
-    T: SyncTask + Sync + Send + 'static,
-    <T as SyncTask>::Input: Send,
-    <T as SyncTask>::Output: Send + 'static,
-    <T as SyncTask>::Error: From<TaskError> + Send + 'static,
+    T: SyncTask<INPUT> + Sync + Send + 'static,
+    <T as SyncTask<INPUT>>::Output: Send + 'static,
+    <T as SyncTask<INPUT>>::Error: From<TaskError> + Send + 'static,
 {
-    pub fn new(size: usize, task: T) -> Result<Pool<T>, Box<dyn std::error::Error>> {
+    pub fn new(size: usize, task: T) -> Result<Pool<T,INPUT>, Box<dyn std::error::Error>> {
         let tp = ThreadPoolBuilder::new().num_threads(size).build()?;
         Ok(Self::with_pool(tp, task))
     }
 
-    pub fn with_pool(pool: ThreadPool, task: T) -> Pool<T> {
+    pub fn with_pool(pool: ThreadPool, task: T) -> Pool<T,INPUT> {
         Pool {
             tp: Arc::new(pool),
             task: Arc::new(task),
+            _i: std::marker::PhantomData
         }
     }
 }
 
-impl<T> Task for Pool<T>
+impl<T, INPUT: Send> Task<INPUT> for Pool<T, INPUT>
 where
-    T: SyncTask + Sync + Send + 'static,
-    <T as SyncTask>::Input: Send,
-    <T as SyncTask>::Output: Send + 'static,
-    <T as SyncTask>::Error: From<TaskError> + Send + 'static,
+    T: SyncTask<INPUT> + Sync + Send + 'static,
+    <T as SyncTask<INPUT>>::Output: Send + 'static,
+    <T as SyncTask<INPUT>>::Error: From<TaskError> + Send + 'static,
 {
-    type Input = T::Input;
     type Output = T::Output;
     type Error = T::Error;
     type Future = ChannelReceiverFuture<T::Output, T::Error>;
 
-    fn exec(&self, input: Self::Input) -> Self::Future {
+    fn exec(&self, input: INPUT) -> Self::Future {
         let (sx, rx) = channel();
         let work = self.task.clone();
         self.tp.install(move || {
@@ -58,7 +57,7 @@ where
         ChannelReceiverFuture::new(rx)
     }
 
-    fn can_exec(&self, input: &Self::Input) -> bool {
+    fn can_exec(&self, input: &INPUT) -> bool {
         self.task.can_exec(input)
     }
 }

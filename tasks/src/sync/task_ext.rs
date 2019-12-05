@@ -6,9 +6,9 @@ use crate::error::TaskError;
 use num_cpus;
 use rayon::ThreadPool;
 
-pub trait SyncTaskExt: SyncTask + Sized {
-    fn into_async(self, threadpool: Option<ThreadPool>) -> Result<Pool<Self>, TaskError>;
-    fn pipe<T: IntoSyncTask<Input = Self::Output, Error = Self::Error>>(
+pub trait SyncTaskExt<I>: SyncTask<I> + Sized {
+    fn into_async(self, threadpool: Option<ThreadPool>) -> Result<Pool<Self, I>, TaskError>;
+    fn pipe<T: IntoSyncTask<Self::Output, Error = Self::Error>>(
         self,
         next: T,
     ) -> SyncPipe<Self, T::Task> {
@@ -18,7 +18,7 @@ pub trait SyncTaskExt: SyncTask + Sized {
         }
     }
 
-    fn or<S: IntoSyncTask<Input = Self::Input, Output = Self::Output, Error = Self::Error>>(
+    fn or<S: IntoSyncTask<I, Output = Self::Output, Error = Self::Error>>(
         self,
         service: S,
     ) -> EitherSync<Self, S::Task> {
@@ -26,17 +26,16 @@ pub trait SyncTaskExt: SyncTask + Sized {
     }
 }
 
-impl<T> SyncTaskExt for T
+impl<T, I> SyncTaskExt<I> for T
 where
-    T: SyncTask + Sync + Send + 'static,
-    <T as SyncTask>::Input: Send,
-    <T as SyncTask>::Output: Send,
-    <T as SyncTask>::Error: From<TaskError> + Send,
+    T: SyncTask<I> + Sync + Send + 'static,
+    <T as SyncTask<I>>::Output: Send + 'static,
+    <T as SyncTask<I>>::Error: From<TaskError> + Send + 'static,
 {
     fn into_async(
         self,
         threadpool: Option<ThreadPool>,
-    ) -> Result<Pool<Self>, TaskError> {
+    ) -> Result<Pool<Self, I>, TaskError> {
         match threadpool {
             Some(tp) => Ok(Pool::with_pool(tp, self)),
             None => Pool::new(num_cpus::get(), self).map_err(|_| TaskError::ThreadPoolError),

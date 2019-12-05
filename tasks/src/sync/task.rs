@@ -1,9 +1,8 @@
-pub trait SyncTask {
-    type Input;
+pub trait SyncTask<INPUT> {
     type Output;
     type Error;
-    fn exec(&self, input: Self::Input) -> Result<Self::Output, Self::Error>;
-    fn can_exec(&self, input: &Self::Input) -> bool {
+    fn exec(&self, input: INPUT) -> Result<Self::Output, Self::Error>;
+    fn can_exec(&self, input: &INPUT) -> bool {
         true
     }
 }
@@ -12,25 +11,18 @@ pub trait SyncTask {
 //     fn can_exec(&self, input: &Self::Input) -> bool;
 // }
 
-
-pub trait IntoSyncTask {
-    type Input;
+pub trait IntoSyncTask<INPUT> {
     type Output;
     type Error;
-    type Task: SyncTask<
-        Input = Self::Input,
-        Output = Self::Output,
-        Error = Self::Error,
-    >;
+    type Task: SyncTask<INPUT, Output = Self::Output, Error = Self::Error>;
 
     fn into_task(self) -> Self::Task;
 }
 
-impl<T> IntoSyncTask for T
+impl<T, I> IntoSyncTask<I> for T
 where
-    T: SyncTask,
+    T: SyncTask<I>,
 {
-    type Input = T::Input;
     type Output = T::Output;
     type Error = T::Error;
     type Task = T;
@@ -38,7 +30,6 @@ where
         self
     }
 }
-
 
 // pub trait IntoConditionalSyncTask {
 //     type Input;
@@ -65,7 +56,6 @@ where
 //         self
 //     }
 // }
-
 
 #[derive(Clone)]
 pub struct SyncTaskFn<F, I, O, E, C> {
@@ -107,12 +97,11 @@ where
     }
 }
 
-impl<F, I, O, E, C> SyncTask for SyncTaskFn<F, I, O, E, C>
+impl<F, I, O, E, C> SyncTask<I> for SyncTaskFn<F, I, O, E, C>
 where
     F: Fn(I) -> Result<O, E>,
     C: Fn(&I) -> bool,
 {
-    type Input = I;
     type Output = O;
     type Error = E;
 
