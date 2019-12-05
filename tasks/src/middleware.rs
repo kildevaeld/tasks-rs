@@ -76,25 +76,24 @@ impl Error for ChannelErr {
     }
 }
 
-pub trait Middleware {
-    type Input;
+pub trait Middleware<INPUT> {
+    //type Input;
     type Output;
     type Error;
     type Future: Future<Output = Result<Self::Output, Self::Error>> + Send + 'static;
     fn execute(
         &self,
-        req: Self::Input,
-        next: Next<Self::Input, Self::Output, Self::Error>,
+        req: INPUT,
+        next: Next<INPUT, Self::Output, Self::Error>,
     ) -> Self::Future;
 }
 
-pub trait IntoMiddleware {
-    type Input;
+pub trait IntoMiddleware<INPUT> {
     type Output;
     type Error;
     type Future: Future<Output = Result<Self::Output, Self::Error>> + Send + 'static;
     type Middleware: Middleware<
-        Input = Self::Input,
+        INPUT,
         Output = Self::Output,
         Error = Self::Error,
         Future = Self::Future,
@@ -102,11 +101,10 @@ pub trait IntoMiddleware {
     fn into_middleware(self) -> Self::Middleware;
 }
 
-impl<T> IntoMiddleware for T
+impl<T, I> IntoMiddleware<I> for T
 where
-    T: Middleware,
+    T: Middleware<I>,
 {
-    type Input = T::Input;
     type Output = T::Output;
     type Error = T::Error;
     type Future = T::Future;
@@ -116,18 +114,17 @@ where
     }
 }
 
-impl<T> Middleware for std::sync::Arc<T>
+impl<T, I> Middleware<I> for std::sync::Arc<T>
 where
-    T: Middleware,
+    T: Middleware<I>,
 {
-    type Input = T::Input;
     type Output = T::Output;
     type Error = T::Error;
     type Future = T::Future;
     fn execute(
         &self,
-        req: Self::Input,
-        next: Next<Self::Input, Self::Output, Self::Error>,
+        req: I,
+        next: Next<I, Self::Output, Self::Error>,
     ) -> Self::Future {
         self.as_ref().execute(req, next)
     }
@@ -157,12 +154,11 @@ where
     }
 }
 
-impl<F, I, O, E, U> Middleware for MiddlewareFn<F, I, O, E>
+impl<F, I, O, E, U> Middleware<I> for MiddlewareFn<F, I, O, E>
 where
     F: (Fn(I, Next<I, O, E>) -> U) + Send + Sync + std::marker::Unpin,
     U: Future<Output = Result<O, E>> + Send + 'static,
 {
-    type Input = I;
     type Output = O;
     type Error = E;
     type Future = U;

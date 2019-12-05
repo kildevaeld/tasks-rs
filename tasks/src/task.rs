@@ -1,24 +1,22 @@
 use std::future::Future;
 
-pub trait Task {
-    type Input;
+pub trait Task<Input> {
     type Output;
     type Error;
     type Future: Future<Output = Result<Self::Output, Self::Error>> + Send + 'static;
 
-    fn exec(&self, input: Self::Input) -> Self::Future;
-    fn can_exec(&self, input: &Self::Input) -> bool;
+    fn exec(&self, input: Input) -> Self::Future;
+    fn can_exec(&self, input: &Input) -> bool;
     
 }
 
 
-pub trait IntoTask {
-    type Input;
+pub trait IntoTask<I> {
     type Output;
     type Error;
     type Future: Future<Output = Result<Self::Output, Self::Error>> + Send + 'static;
     type Task: Task<
-        Input = Self::Input,
+        I,
         Output = Self::Output,
         Error = Self::Error,
         Future = Self::Future,
@@ -27,11 +25,11 @@ pub trait IntoTask {
     fn into_task(self) -> Self::Task;
 }
 
-impl<T> IntoTask for T
+impl<T, I> IntoTask<I> for T
 where
-    T: Task,
+    T: Task<I>,
 {
-    type Input = T::Input;
+
     type Output = T::Output;
     type Error = T::Error;
     type Future = T::Future;
@@ -71,13 +69,12 @@ where
 
 
 
-impl<F, I, O, E, C, U> Task for TaskFn<F, I, O, E, C>
+impl<F, I, O, E, C, U> Task<I> for TaskFn<F, I, O, E, C>
 where
     F: Fn(I) -> U,
     U: Future<Output = Result<O, E>> + Send + 'static,
     C: Fn(&I) -> bool,
 {
-    type Input = I;
     type Output = O;
     type Error = E;
     type Future = U;
@@ -86,7 +83,7 @@ where
         (self.inner)(input)
     }
 
-    fn can_exec(&self, input: &Self::Input) -> bool {
+    fn can_exec(&self, input: &I) -> bool {
         (self.check)(input)
     }
 }

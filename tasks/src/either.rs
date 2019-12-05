@@ -14,18 +14,18 @@ impl<S1, S2> Either<S1, S2> {
     }
 }
 
-impl<S1, S2> Task for Either<S1, S2>
+impl<S1, S2, I> Task<I> for Either<S1, S2>
 where
-    S1: Task,
-    <S1 as Task>::Output: Send + 'static,
-    <S1 as Task>::Error: Send + 'static + From<TaskError>,
+    S1: Task<I>,
+    <S1 as Task<I>>::Output: Send + 'static,
+    <S1 as Task<I>>::Error: Send + 'static + From<TaskError>,
     S2: Task<
-        Input = <S1 as Task>::Input,
-        Output = <S1 as Task>::Output,
-        Error = <S1 as Task>::Error,
+        I,
+        Output = <S1 as Task<I>>::Output,
+        Error = <S1 as Task<I>>::Error,
     >,
 {
-    type Input = S1::Input;
+    
     type Output = S1::Output;
     type Error = S1::Error;
 
@@ -36,7 +36,7 @@ where
         Result<Self::Output, Self::Error>
     >;
 
-    fn exec(&self, ctx: Self::Input) -> Self::Future {
+    fn exec(&self, ctx: I) -> Self::Future {
         let fut = if self.s1.can_exec(&ctx) {
             Promise3::First(self.s1.exec(ctx))
         } else if self.s2.can_exec(&ctx) {
@@ -51,7 +51,7 @@ where
     }
 
     #[inline]
-    fn can_exec(&self, ctx: &Self::Input) -> bool {
+    fn can_exec(&self, ctx: &I) -> bool {
         self.s1.can_exec(ctx) || self.s2.can_exec(ctx)
     }
 

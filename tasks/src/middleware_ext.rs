@@ -12,30 +12,29 @@ pub struct MiddlewareChain<S, F> {
     f: Arc<F>,
 }
 
-impl<S, F> Middleware for MiddlewareChain<S, F>
+impl<S, F, I: Send + 'static> Middleware<I> for MiddlewareChain<S, F>
 where
-    S: Middleware + Send + Sync + 'static,
-    <S as Middleware>::Input: Send,
-    <S as Middleware>::Output: Send,
-    <S as Middleware>::Error: Send,
+    S: Middleware<I> + Send + Sync + 'static,
+    //<S as Middleware>::Input: Send,
+    <S as Middleware<I>>::Output: Send + 'static,
+    <S as Middleware<I>>::Error: Send + 'static,
     F: Middleware<
-            Input = <S as Middleware>::Input,
-            Output = <S as Middleware>::Output,
-            Error = <S as Middleware>::Error,
+            I,
+            Output = <S as Middleware<I>>::Output,
+            Error = <S as Middleware<I>>::Error,
         > + Send
         + Sync
         + 'static,
-    <F as Middleware>::Future: Sync,
+    <F as Middleware<I>>::Future: Sync,
 {
-    type Input = S::Input;
     type Output = S::Output;
     type Error = S::Error;
-    type Future = MiddlewareChainFuture<S, F, Self::Input, Self::Output, Self::Error>;
+    type Future = MiddlewareChainFuture<S, F, I, Self::Output, Self::Error>;
 
     fn execute(
         &self,
-        req: Self::Input,
-        next: Next<Self::Input, Self::Output, Self::Error>,
+        req: I,
+        next: Next<I, Self::Output, Self::Error>,
     ) -> Self::Future {
         MiddlewareChainFuture::new(self.s.clone(), self.f.clone(), req, next)
     }
@@ -55,31 +54,29 @@ impl<M, H> MiddlewareHandler<M, H> {
     }
 }
 
-impl<M, H> Task for MiddlewareHandler<M, H>
+impl<M, H, I: Send + 'static> Task<I> for MiddlewareHandler<M, H>
 where
-    M: Middleware + Send + Sync + 'static,
+    M: Middleware<I> + Send + Sync + 'static,
     H: Task<
-            Input = <M as Middleware>::Input,
-            Output = <M as Middleware>::Output,
-            Error = <M as Middleware>::Error,
+            I,
+            Output = <M as Middleware<I>>::Output,
+            Error = <M as Middleware<I>>::Error,
         > + Send
         + Sync
         + 'static,
-    <M as Middleware>::Input: Send + 'static,
-    <M as Middleware>::Output: Send + 'static,
-    <M as Middleware>::Error: Send + 'static,
-    <H as Task>::Future: Send + Sync,
+    <M as Middleware<I>>::Output: Send + 'static,
+    <M as Middleware<I>>::Error: Send + 'static,
+    <H as Task<I>>::Future: Send + Sync,
 {
-    type Input = M::Input;
     type Output = M::Output;
     type Error = M::Error;
-    type Future = MiddlewareHandlerFuture<M, H, Self::Input, Self::Output, Self::Error>;
+    type Future = MiddlewareHandlerFuture<M, H, I, Self::Output, Self::Error>;
 
-    fn exec(&self, req: Self::Input) -> Self::Future {
+    fn exec(&self, req: I) -> Self::Future {
         MiddlewareHandlerFuture::new(self.m.clone(), self.h.clone(), req)
     }
 
-    fn can_exec(&self, input: &Self::Input) -> bool {
+    fn can_exec(&self, input: &I) -> bool {
         self.h.can_exec(input)
     }
 }
@@ -104,26 +101,26 @@ where
 //     }
 // }
 
-pub trait MiddlewareExt: Middleware + Sized {
-    fn stack<M: IntoMiddleware>(self, other: M) -> MiddlewareChain<Self, M::Middleware>;
-    fn then<M: IntoTask<Input = Self::Input, Output = Self::Output, Error = Self::Error>>(
+pub trait MiddlewareExt<I>: Middleware<I> + Sized {
+    fn stack<M: IntoMiddleware<I>>(self, other: M) -> MiddlewareChain<Self, M::Middleware>;
+    fn then<M: IntoTask<I, Output = Self::Output, Error = Self::Error>>(
         self,
         handler: M,
     ) -> MiddlewareHandler<Self, M::Task>;
 }
 
-impl<T> MiddlewareExt for T
+impl<T, I> MiddlewareExt<I> for T
 where
-    T: Middleware,
+    T: Middleware<I>,
 {
-    fn stack<M: IntoMiddleware>(self, other: M) -> MiddlewareChain<Self, M::Middleware> {
+    fn stack<M: IntoMiddleware<I>>(self, other: M) -> MiddlewareChain<Self, M::Middleware> {
         MiddlewareChain {
             s: Arc::new(self),
             f: Arc::new(other.into_middleware()),
         }
     }
 
-    fn then<M: IntoTask<Input = Self::Input, Output = Self::Output, Error = Self::Error>>(
+    fn then<M: IntoTask<I, Output = Self::Output, Error = Self::Error>>(
         self,
         handler: M,
     ) -> MiddlewareHandler<Self, M::Task> {
@@ -146,8 +143,8 @@ pub enum MiddlewareChainFutureState<R, M1, M2, Req, Res, Err> {
 
 pub struct MiddlewareChainFuture<S1, S2, Req, Res, Err>
 where
-    S1: Middleware<Input = Req, Output = Res, Error = Err>,
-    S2: Middleware<Input = Req, Output = Res, Error = Err>,
+    S1: Middleware<Req, Output = Res, Error = Err>,
+    S2: Middleware<Req, Output = Res, Error = Err>,
 {
     s1: Arc<S1>,
     s2: Arc<S2>,
@@ -156,8 +153,8 @@ where
 
 impl<S1, S2, Req, Res, Err> MiddlewareChainFuture<S1, S2, Req, Res, Err>
 where
-    S1: Middleware<Input = Req, Output = Res, Error = Err>,
-    S2: Middleware<Input = Req, Output = Res, Error = Err>,
+    S1: Middleware<Req, Output = Res, Error = Err>,
+    S2: Middleware<Req, Output = Res, Error = Err>,
 {
     pub fn new(
         m1: Arc<S1>,
@@ -175,8 +172,8 @@ where
 
 impl<S1, S2, Req, Res, Err> Future for MiddlewareChainFuture<S1, S2, Req, Res, Err>
 where
-    S1: Middleware<Input = Req, Output = Res, Error = Err>,
-    S2: Middleware<Input = Req, Output = Res, Error = Err>,
+    S1: Middleware<Req, Output = Res, Error = Err>,
+    S2: Middleware<Req, Output = Res, Error = Err>,
 {
     type Output = Result<Res, Err>;
 
@@ -253,8 +250,8 @@ pub enum MiddlewareHandlerFutureState<M1, M2, Req, Res, Err> {
 
 pub struct MiddlewareHandlerFuture<S1, S2, Req, Res, Err>
 where
-    S1: Middleware<Input = Req, Output = Res, Error = Err>,
-    S2: Task<Input = Req, Output = Res, Error = Err>,
+    S1: Middleware<Req, Output = Res, Error = Err>,
+    S2: Task<Req, Output = Res, Error = Err>,
 {
     s1: Arc<S1>,
     s2: Arc<S2>,
@@ -263,8 +260,8 @@ where
 
 impl<S1, S2, Req, Res, Err> MiddlewareHandlerFuture<S1, S2, Req, Res, Err>
 where
-    S1: Middleware<Input = Req, Output = Res, Error = Err>,
-    S2: Task<Input = Req, Output = Res, Error = Err>,
+    S1: Middleware<Req, Output = Res, Error = Err>,
+    S2: Task<Req, Output = Res, Error = Err>,
 {
     pub fn new(
         m1: Arc<S1>,
@@ -281,8 +278,8 @@ where
 
 impl<S1, S2, Req, Res, Err> Future for MiddlewareHandlerFuture<S1, S2, Req, Res, Err>
 where
-    S1: Middleware<Input = Req, Output = Res, Error = Err>,
-    S2: Task<Input = Req, Output = Res, Error = Err>,
+    S1: Middleware<Req, Output = Res, Error = Err>,
+    S2: Task<Req, Output = Res, Error = Err>,
 {
     type Output = Result<Res, Err>;
 
