@@ -25,9 +25,7 @@ pub trait IntoTask<I> {
     fn into_task(self) -> Self::Task;
 }
 
-impl<T, I> IntoTask<I> for T
-where
-    T: Task<I>,
+impl<T: Task<I>, I> IntoTask<I> for T
 {
 
     type Output = T::Output;
