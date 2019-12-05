@@ -21,6 +21,6 @@ pub use either::*;
 pub use error::*;
 pub use task_ext::*;
 pub use middleware::*;
-//pub use middleware_ext::*;
+pub use middleware_ext::*;
 #[cfg(feature = "sync")]
 pub use sync::*;
