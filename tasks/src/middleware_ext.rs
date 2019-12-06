@@ -81,25 +81,6 @@ where
     }
 }
 
-// impl<M, H> ConditionalTask for MiddlewareHandler<M, H>
-// where
-//     M: Middleware + 'static + Sync + Send,
-//     H: ConditionalTask<
-//             Input = <M as Middleware>::Input,
-//             Output = <M as Middleware>::Output,
-//             Error = <M as Middleware>::Error,
-//         > + Send
-//         + Sync
-//         + 'static,
-//     <M as Middleware>::Input: Send + 'static,
-//     <M as Middleware>::Output: Send + 'static,
-//     <M as Middleware>::Error: Send + 'static,
-//     <H as Task>::Future: Send + Sync,
-// {
-//     fn can_exec(&self, input: &Self::Input) -> bool {
-//         self.h.can_exec(input)
-//     }
-// }
 
 pub trait MiddlewareExt<I>: Middleware<I> + Sized {
     fn stack<M: IntoMiddleware<I>>(self, other: M) -> MiddlewareChain<Self, M::Middleware>;

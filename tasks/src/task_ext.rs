@@ -1,6 +1,6 @@
 use super::either::Either;
 use super::pipe::Pipe;
-use super::task::{IntoTask, Task};
+use super::task::{IntoTask, Task, Transform};
 use std::sync::Arc;
 
 pub trait TaskExt<I>: Task<I> + Sized {
@@ -18,6 +18,14 @@ pub trait TaskExt<I>: Task<I> + Sized {
    
     {
         Either::new(self, service.into_task())
+    }
+
+    fn map<S: From<I>>(self) -> Pipe<Self, Transform<I, S, Self::Error>> {
+        let pipe = Pipe {
+            s1: self,
+            s2: Arc::new(Transform::new())
+        };
+        pipe
     }
 }
 
@@ -61,4 +69,6 @@ mod tests {
             Err(TaskError::InvalidRequest)
         );
     }
+
+    
 }
