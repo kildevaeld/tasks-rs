@@ -3,6 +3,7 @@ use std::task::{Poll, Context};
 use std::future::Future;
 use pin_project::pin_project;
 
+
 #[pin_project]
 pub enum Promise<T1, T2> {
     First(#[pin] T1),
@@ -117,7 +118,4 @@ impl<
         }
     }
 }
-
-
-
 

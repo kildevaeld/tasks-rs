@@ -1,4 +1,6 @@
 use std::future::Future;
+use futures_util::future::Ready;
+use std::marker::PhantomData;
 
 pub trait Task<Input> {
     type Output;
@@ -83,5 +85,33 @@ where
 
     fn can_exec(&self, input: &I) -> bool {
         (self.check)(input)
+    }
+}
+
+
+pub struct Transform<FROM, TO, ERROR>(PhantomData<FROM>, PhantomData<TO>, PhantomData<ERROR>);
+
+impl<FROM, TO, ERROR> Transform<FROM, TO, ERROR> {
+    pub fn new() -> Transform<FROM, TO, ERROR> {
+        Transform(PhantomData, PhantomData, PhantomData)
+    }
+}
+
+impl<FROM: Send + Sync + 'static, TO: Send + 'static + From<FROM>, ERROR: Send + 'static> Task<FROM>
+    for Transform<FROM, TO, ERROR>
+{
+    type Output = TO;
+    type Error = ERROR;
+    type Future = Ready<Result<TO, ERROR>>;
+
+    #[inline]
+    fn exec(&self, input: FROM) -> Self::Future {
+        let out = TO::from(input);
+        futures_util::future::ok(out)
+    }
+
+    #[inline]
+    fn can_exec(&self, _input: &FROM) -> bool {
+        true
     }
 }

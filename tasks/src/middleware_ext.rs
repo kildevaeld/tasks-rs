@@ -204,7 +204,7 @@ where
                             let fut2 = this.s2.execute(req, next);
                             this.state = MiddlewareChainFutureState::Middleware2(fut, fut2, sx);
                         }
-                        Poll::Ready(Err(err)) => {
+                        Poll::Ready(Err(_)) => {
                             this.state = MiddlewareChainFutureState::Middleware3(fut);
                             return Poll::Pending;
                         }
