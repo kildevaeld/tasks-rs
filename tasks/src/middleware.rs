@@ -51,7 +51,7 @@ impl<Res, Err> NextFuture<Res, Err> {
 impl<Res, Err> Future for NextFuture<Res, Err> {
     type Output = Result<Res, Err>;
 
-    fn poll(mut self: Pin<&mut Self>, waker: &mut Context<'_>) -> Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, waker: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.project();
         match this.inner.poll(waker) {
             Poll::Pending => Poll::Pending,

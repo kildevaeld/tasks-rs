@@ -57,22 +57,3 @@ where
 
     
 }
-
-// impl<S1, S2> ConditionalTask for Either<S1,S2> 
-// where
-//     S1: ConditionalTask,
-//     <S1 as Task>::Output: Send + 'static,
-//     <S1 as Task>::Error: Send + 'static + From<TaskError>,
-//     S2: ConditionalTask<
-//         Input = <S1 as Task>::Input,
-//         Output = <S1 as Task>::Output,
-//         Error = <S1 as Task>::Error,
-//     >,
-
-// {
-
-//     #[inline]
-//     fn can_exec(&self, ctx: &Self::Input) -> bool {
-//         self.s1.can_exec(ctx) || self.s2.can_exec(ctx)
-//     }
-// }
