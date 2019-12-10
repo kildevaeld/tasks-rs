@@ -20,10 +20,10 @@ pub trait TaskExt<I>: Task<I> + Sized {
         Either::new(self, service.into_task())
     }
 
-    fn map<S: From<I>>(self) -> Pipe<Self, Transform<I, S, Self::Error>> {
+    fn map<S, F: Fn(I) -> S>(self, trans: F) -> Pipe<Self, Transform<I, S, Self::Error, F>> {
         let pipe = Pipe {
             s1: self,
-            s2: Arc::new(Transform::new())
+            s2: Arc::new(Transform::new(trans))
         };
         pipe
     }

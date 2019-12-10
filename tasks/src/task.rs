@@ -1,5 +1,5 @@
-use std::future::Future;
 use futures_util::future::Ready;
+use std::future::Future;
 use std::marker::PhantomData;
 
 pub trait Task<Input> {
@@ -9,27 +9,18 @@ pub trait Task<Input> {
 
     fn exec(&self, input: Input) -> Self::Future;
     fn can_exec(&self, input: &Input) -> bool;
-    
 }
-
 
 pub trait IntoTask<I> {
     type Output;
     type Error;
     type Future: Future<Output = Result<Self::Output, Self::Error>> + Send + 'static;
-    type Task: Task<
-        I,
-        Output = Self::Output,
-        Error = Self::Error,
-        Future = Self::Future,
-    >;
+    type Task: Task<I, Output = Self::Output, Error = Self::Error, Future = Self::Future>;
 
     fn into_task(self) -> Self::Task;
 }
 
-impl<T: Task<I>, I> IntoTask<I> for T
-{
-
+impl<T: Task<I>, I> IntoTask<I> for T {
     type Output = T::Output;
     type Error = T::Error;
     type Future = T::Future;
@@ -38,8 +29,6 @@ impl<T: Task<I>, I> IntoTask<I> for T
         self
     }
 }
-
-
 
 #[derive(Clone)]
 pub struct TaskFn<F, I, O, E, C> {
@@ -67,8 +56,6 @@ where
     }
 }
 
-
-
 impl<F, I, O, E, C, U> Task<I> for TaskFn<F, I, O, E, C>
 where
     F: Fn(I) -> U,
@@ -88,17 +75,18 @@ where
     }
 }
 
+pub struct Transform<FROM, TO, ERROR, C>(C, PhantomData<FROM>, PhantomData<TO>, PhantomData<ERROR>);
 
-pub struct Transform<FROM, TO, ERROR>(PhantomData<FROM>, PhantomData<TO>, PhantomData<ERROR>);
-
-impl<FROM, TO, ERROR> Transform<FROM, TO, ERROR> {
-    pub fn new() -> Transform<FROM, TO, ERROR> {
-        Transform(PhantomData, PhantomData, PhantomData)
+impl<FROM, TO, ERROR, C> Transform<FROM, TO, ERROR, C> {
+    pub fn new(trans: C) -> Transform<FROM, TO, ERROR, C> {
+        Transform(trans, PhantomData, PhantomData, PhantomData)
     }
 }
 
-impl<FROM: Send + Sync + 'static, TO: Send + 'static + From<FROM>, ERROR: Send + 'static> Task<FROM>
-    for Transform<FROM, TO, ERROR>
+impl<FROM: Send + Sync + 'static, TO: Send + 'static, ERROR: Send + 'static, C> Task<FROM>
+    for Transform<FROM, TO, ERROR, C>
+where
+    C: Fn(FROM) -> TO,
 {
     type Output = TO;
     type Error = ERROR;
@@ -106,7 +94,7 @@ impl<FROM: Send + Sync + 'static, TO: Send + 'static + From<FROM>, ERROR: Send +
 
     #[inline]
     fn exec(&self, input: FROM) -> Self::Future {
-        let out = TO::from(input);
+        let out = (self.0)(input);
         futures_util::future::ok(out)
     }
 
