@@ -4,8 +4,12 @@ pub mod utils;
 mod either;
 mod error;
 mod task_ext;
+mod task_stream;
 mod middleware;
 mod middleware_ext;
+
+mod producer;
+mod producer_ext;
 
 #[macro_use]
 pub mod macros;
@@ -24,3 +28,5 @@ pub use middleware::*;
 pub use middleware_ext::*;
 #[cfg(feature = "sync")]
 pub use sync::*;
+
+pub use producer::*;

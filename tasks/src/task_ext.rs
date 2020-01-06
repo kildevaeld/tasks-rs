@@ -31,6 +31,10 @@ pub trait TaskExt<I>: Task<I> + Sized {
 
 impl<T, I> TaskExt<I> for T where T: Task<I> {}
 
+
+
+
+
 #[cfg(test)]
 mod tests {
     use super::super::error::TaskError;
