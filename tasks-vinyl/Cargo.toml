@@ -1,0 +1,25 @@
+[package]
+name = "tasks-vinyl"
+version = "0.1.0"
+authors = ["Rasmus Kildevæld <rasmuskildevaeld@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+futures-core = "0.3"
+futures-util = { version = "0.3", features = [ "io" ] }
+futures-io = "0.3"
+bytes = "0.5"
+tasks = { path = "../tasks" }
+async-std = { version = "1.4", optional = true, features = [ "attributes" ] }
+failure = "0.1"
+pin-project = "0.4"
+
+[features]
+default = [ "runtime" ]
+runtime = [ "async-std" ]
+
+[[example]]
+path = "examples/main.rs"
+name = "vinyl"
