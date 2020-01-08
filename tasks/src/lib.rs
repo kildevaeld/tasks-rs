@@ -30,3 +30,5 @@ pub use middleware_ext::*;
 pub use sync::*;
 
 pub use producer::*;
+pub use producer_ext::*;
+pub use task_stream::*;
