@@ -1,5 +1,5 @@
-use super::error::Error;
-use super::file::{Content, File, FileType, IntoFile, Metadata};
+use crate::error::Error;
+use crate::file::{Content, File, FileType, IntoFile, Metadata};
 use async_std::fs::{DirEntry, File as AFile, ReadDir, read_dir};
 use async_std::prelude::*;
 use futures_core::Stream;

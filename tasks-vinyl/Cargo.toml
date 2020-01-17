@@ -17,8 +17,8 @@ failure = "0.1"
 pin-project = "0.4"
 
 [features]
-default = [ "runtime" ]
-runtime = [ "async-std" ]
+default = [ "async-std" ]
+
 
 [[example]]
 path = "examples/main.rs"
