@@ -9,6 +9,8 @@ futures-core = "0.3"
 futures-util = "0.3"
 futures-channel = "0.3"
 pin-project = "0.4"
+plugin = { git = "https://github.com/kildevaeld/rust-plugin", optional = true }
+typemap = { version = "0.3", optional = true }
 rayon = { version = "1.3", optional = true }
 num_cpus = { version = "1", optional = true }
 
@@ -20,3 +22,4 @@ async-stream = "0.2"
 [features]
 default = [  ]
 sync = ["rayon", "num_cpus"]
+persist = [ "plugin", "typemap" ]

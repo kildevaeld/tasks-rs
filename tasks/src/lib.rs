@@ -17,6 +17,9 @@ pub mod macros;
 #[cfg(feature = "sync")]
 pub mod sync;
 
+#[cfg(feature = "persist")]
+pub mod persist;
+
 
 
 pub use pipe::*;

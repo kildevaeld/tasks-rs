@@ -5,7 +5,7 @@ use futures_util::pin_mut;
 
 #[async_std::main]
 async fn main() -> Result<(), Error> {
-    let dir = DirectoryProducer::new("./tasks/src").await?;
+    let dir = DirectoryProducer::new("./").await?;
 
     dir.into_vinyl().with_task(task_fn!(|mut item: File| {
         async move {
