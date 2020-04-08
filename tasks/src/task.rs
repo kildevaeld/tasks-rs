@@ -104,3 +104,8 @@ where
     }
 }
 
+
+pub enum Rejection<R, E> {
+    Error(E),
+    Reject(R)
+}
