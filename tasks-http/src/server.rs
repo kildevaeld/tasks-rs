@@ -14,7 +14,8 @@ use hyper::service::{make_service_fn, service_fn};
 use hyper::Server as HyperServer;
 use std::fmt;
 use tokio::io::{AsyncRead, AsyncWrite};
-
+#[cfg(all(unix, feature = "uds"))]
+use tokio::net::UnixListener;
 // use crate::filter::Filter;
 // use crate::reject::IsReject;
 // use crate::reply::Reply;
@@ -77,6 +78,11 @@ pub struct Server<F> {
 pub struct TlsServer<F> {
     server: Server<F>,
     tls: TlsConfigBuilder,
+}
+
+#[cfg(all(unix, feature = "uds"))]
+pub struct UnixDomainServer<T> {
+    server: Server<T>,
 }
 
 // Getting all various generic bounds to make this a re-usable method is
@@ -372,6 +378,11 @@ where
             tls: TlsConfigBuilder::new(),
         }
     }
+
+    #[cfg(all(unix, feature = "uds"))]
+    pub fn uds(self) -> UnixDomainServer<F> {
+        UnixDomainServer { server: self }
+    }
 }
 
 // // ===== impl TlsServer =====
@@ -487,5 +498,41 @@ where
         f.debug_struct("TlsServer")
             .field("server", &self.server)
             .finish()
+    }
+}
+
+#[cfg(all(unix, feature = "uds"))]
+impl<T> UnixDomainServer<T>
+where
+    T: Task<Request, Output = Response, Error = Error> + Clone + Send + Sync + 'static,
+{
+    pub async fn run(self, path: impl AsRef<Path>) {
+        match self.run2(path).await {
+            Ok(_) => {}
+            Err(err) => {
+                log::error!("server error: {}", err);
+            }
+        };
+    }
+
+    async fn run2(
+        self,
+        path: impl AsRef<Path>,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let mut listener = UnixListener::bind(path)?;
+        let local_addr = listener.local_addr()?;
+        let incoming = listener.incoming();
+        let service = into_service!(self.server.task, Protocol::Unix, None);
+
+        let srv = HyperServer::builder(hyper::server::accept::from_stream(incoming.into_stream()))
+            .http1_pipeline_flush(self.server.pipeline)
+            .serve(service)
+            .await;
+
+        if let Err(err) = srv {
+            log::error!("server error: {}", err);
+        }
+
+        Ok(())
     }
 }

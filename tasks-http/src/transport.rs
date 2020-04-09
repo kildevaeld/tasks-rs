@@ -5,6 +5,8 @@ use std::task::{Context, Poll};
 
 use hyper::server::conn::AddrStream;
 use tokio::io::{AsyncRead, AsyncWrite};
+#[cfg(all(unix, feature = "uds"))]
+use tokio::net::UnixStream;
 
 pub trait Transport: AsyncRead + AsyncWrite {
     fn remote_addr(&self) -> Option<SocketAddr>;
@@ -13,6 +15,13 @@ pub trait Transport: AsyncRead + AsyncWrite {
 impl Transport for AddrStream {
     fn remote_addr(&self) -> Option<SocketAddr> {
         Some(self.remote_addr())
+    }
+}
+
+#[cfg(all(unix, feature = "uds"))]
+impl Transport for UnixStream {
+    fn remote_addr(&self) -> Option<SocketAddr> {
+        None
     }
 }
 
