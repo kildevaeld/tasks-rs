@@ -1,7 +1,7 @@
 mod error;
 mod modifiers;
 mod mount;
-mod reply;
+pub mod reply;
 mod request;
 mod response;
 mod server;

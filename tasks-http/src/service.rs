@@ -1,3 +1,4 @@
+use super::reply::Reply;
 use super::server::Protocol;
 use super::transport::Transport;
 use super::Response;
@@ -16,8 +17,8 @@ use tasks_core::{Rejection, Task};
 pub fn service<F>(filter: F) -> TaskService<F>
 where
     F: Task<Request>,
-    // <F::Future as TryFuture>::Ok: Reply,
-    // <F::Future as TryFuture>::Error: IsReject,
+    <F as Task<Request>>::Output: Reply, // <F::Future as TryFuture>::Ok: Reply,
+                                         // <F::Future as TryFuture>::Error: IsReject
 {
     TaskService::new(filter)
 }
@@ -32,6 +33,7 @@ pub struct TaskService<T> {
 impl<T> TaskService<T>
 where
     T: Task<Request>,
+    <T as Task<Request>>::Output: Reply,
 {
     pub fn new(task: T) -> TaskService<T> {
         TaskService {
@@ -61,7 +63,8 @@ where
 
 impl<T> Service<HttpRequest<Body>> for TaskService<T>
 where
-    T: Task<Request, Output = Response, Error = Error>,
+    T: Task<Request, Error = Error>,
+    <T as Task<Request>>::Output: Reply,
 {
     type Response = HttpResponse<Body>;
     type Error = Error;
@@ -102,7 +105,8 @@ where
 
 impl<T> Future for ResponseFuture<T>
 where
-    T: Task<Request, Output = Response, Error = Error>,
+    T: Task<Request, Error = Error>,
+    <T as Task<Request>>::Output: Reply,
 {
     type Output = Result<HttpResponse<Body>, Error>;
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
@@ -114,12 +118,13 @@ where
 
         match ret {
             Ok(resp) => {
+                let resp = resp.into_response();
                 resp.write_back(&mut out, method);
             }
             Err(Rejection::Err(err)) => {
                 err.response.write_back(&mut out, method);
             }
-            Err(Rejection::Reject(req)) => {}
+            Err(Rejection::Reject(_req)) => {}
         };
 
         Poll::Ready(Ok(out))
@@ -148,7 +153,8 @@ impl<T> MakeTaskService<T> {
 
 impl<'t, T, Ctx: Transport> Service<&'t Ctx> for MakeTaskService<T>
 where
-    T: Send + Clone + Task<Request, Output = Response, Error = Error>,
+    T: Send + Clone + Task<Request, Error = Error>,
+    <T as Task<Request>>::Output: Reply,
 {
     type Response = TaskService<T>;
     type Error = Error;

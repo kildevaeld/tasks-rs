@@ -21,13 +21,15 @@ use tokio::net::UnixListener;
 // use crate::reply::Reply;
 use super::{Request, Response};
 // use super::TaskService;
+use super::reply::Reply;
 use crate::transport::Transport;
 use tasks_core::Task;
 
 /// Create a `Server` with the provided `Filter`.
 pub fn serve<T>(task: T) -> Server<T>
 where
-    T: Task<Request, Output = Response, Error = Error> + Clone + Send + Sync + 'static,
+    T: Task<Request, Error = Error> + Clone + Send + Sync + 'static,
+    <T as Task<Request>>::Output: Reply,
     // F::Extract: Reply,
     // F::Error: IsReject
 {
@@ -184,9 +186,10 @@ macro_rules! try_bind {
 
 // ===== impl Server =====
 
-impl<F> Server<F>
+impl<T> Server<T>
 where
-    F: Task<Request, Output = Response, Error = Error> + Clone + Send + Sync + 'static,
+    T: Task<Request, Error = Error> + Clone + Send + Sync + 'static,
+    <T as Task<Request>>::Output: Reply,
     // <F::Future as TryFuture>::Ok: Reply,
     // <F::Future as TryFuture>::Error: IsReject,
 {
@@ -372,7 +375,7 @@ where
     ///
     /// *This function requires the `"tls"` feature.*
     #[cfg(feature = "tls")]
-    pub fn tls(self) -> TlsServer<F> {
+    pub fn tls(self) -> TlsServer<T> {
         TlsServer {
             server: self,
             tls: TlsConfigBuilder::new(),
@@ -380,7 +383,7 @@ where
     }
 
     #[cfg(all(unix, feature = "uds"))]
-    pub fn uds(self) -> UnixDomainServer<F> {
+    pub fn uds(self) -> UnixDomainServer<T> {
         UnixDomainServer { server: self }
     }
 }
@@ -388,11 +391,11 @@ where
 // // ===== impl TlsServer =====
 
 #[cfg(feature = "tls")]
-impl<F> TlsServer<F>
+impl<T> TlsServer<T>
 where
-    F: Task<Request, Output = Response, Error = Error> + Clone + Send + Sync + 'static,
-    // <F::Future as TryFuture>::Ok: Reply,
-    // <F::Future as TryFuture>::Error: IsReject,
+    T: Task<Request, Error = Error> + Clone + Send + Sync + 'static,
+    <T as Task<Request>>::Output: Reply, // <F::Future as TryFuture>::Ok: Reply,
+                                         // <F::Future as TryFuture>::Error: IsReject
 {
     // TLS config methods
 
@@ -504,7 +507,8 @@ where
 #[cfg(all(unix, feature = "uds"))]
 impl<T> UnixDomainServer<T>
 where
-    T: Task<Request, Output = Response, Error = Error> + Clone + Send + Sync + 'static,
+    T: Task<Request, Error = Error> + Clone + Send + Sync + 'static,
+    <T as Task<Request>>::Output: Reply,
 {
     pub async fn run(self, path: impl AsRef<Path>) {
         match self.run2(path).await {
