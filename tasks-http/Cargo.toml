@@ -25,9 +25,11 @@ mime = "0.3"
 mime_guess = "2.0.0"
 multipart = { version = "0.16", default-features = false, features = ["server"], optional = true }
 async-compression = { version = "0.2",  features = [ "stream", "deflate", "gzip", "brotli" ], optional = true }
+serde = { version = "1", optional = true }
+serde_json = { version = "1", optional = true }
 
 [dev-dependencies]
-tokio = { version = "0.2", features = ["macros"] }
+tokio = { version = "0.2", features = ["full"] }
 pretty_env_logger = "0.4"
 
 
@@ -36,3 +38,4 @@ default = [ "tls", "compress", "uds" ]
 tls = [ "tokio-rustls" ]
 compress = [ "async-compression" ]
 uds = [ "tokio/uds" ]
+json = [ "serde", "serde_json" ]

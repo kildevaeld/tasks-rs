@@ -1,6 +1,6 @@
 use super::{Request, Response};
 pub use headers::{
-    CacheControl, ContentLength, ContentType, ETag, Expires, HeaderMapExt, UserAgent,
+    CacheControl, ContentLength, ContentType, ETag, Expires, HeaderMapExt, Location, UserAgent,
 };
 use http::{header, StatusCode};
 use hyper::Body;
@@ -63,17 +63,6 @@ where
     }
 }
 
-// impl<H> Modifier<Request> for Header<H>
-// where
-//     H: header::IntoHeaderName,
-// {
-//     fn modify(self, res: &mut Request) {
-//         res.headers_mut().insert(self.0, self.1);
-//     }
-// }
-
-// pub struct ContentType(pub header::HeaderValue);
-
 macro_rules! typed_header_impl {
     ($header: ty) => {
         impl Modifier<Response> for $header {
@@ -89,12 +78,6 @@ typed_header_impl!(ContentLength);
 typed_header_impl!(CacheControl);
 typed_header_impl!(ETag);
 typed_header_impl!(Expires);
-
-// impl Modifier<Response> for ContentType {
-//     fn modify(self, res: &mut Response) {
-//         res.headers.typed_insert(self)
-//     }
-// }
 
 /// A modifier for creating redirect responses.
 pub struct Redirect(pub Url);

@@ -23,12 +23,25 @@ pub trait Middleware<R> {
     ) -> Self::Future;
 }
 
-#[derive(Clone)]
 pub struct MiddlewareFn<F, I, O, E> {
     inner: F,
     _i: PhantomData<I>,
     _o: PhantomData<O>,
     _e: PhantomData<E>,
+}
+
+impl<F, I, O, E> Clone for MiddlewareFn<F, I, O, E>
+where
+    F: Clone,
+{
+    fn clone(&self) -> Self {
+        MiddlewareFn {
+            inner: self.inner.clone(),
+            _i: PhantomData,
+            _o: PhantomData,
+            _e: PhantomData,
+        }
+    }
 }
 
 impl<F, I, O, E, U> MiddlewareFn<F, I, O, E>

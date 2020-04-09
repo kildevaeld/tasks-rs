@@ -28,5 +28,5 @@ pub mod prelude {
     pub use super::{BoxError, Error, Request, Response};
     pub use hyper::{HeaderMap, StatusCode};
     pub use modifier::Set;
-    pub use tasks_core::{task, Middleware, MiddlewareExt, Task, TaskExt};
+    pub use tasks_core::{middleware, task, Middleware, MiddlewareExt, Next, Task, TaskExt};
 }

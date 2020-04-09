@@ -4,7 +4,6 @@ use http::Extensions;
 use hyper::{header, Body, Method, Request as HttpRequest, Version};
 use std::net::SocketAddr;
 use url::Url;
-// pub type Request = HttpRequest<Body>;
 
 pub struct Request {
     inner: HttpRequest<Body>,
@@ -17,7 +16,6 @@ impl Request {
         protocol: Protocol,
         local_addr: Option<SocketAddr>,
     ) -> Request {
-        //let url = Url::parse(&req.uri().to_string()).unwrap();
         let uri = req.uri();
         let headers = req.headers();
         let version = req.version();
