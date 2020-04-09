@@ -21,29 +21,11 @@ impl Response {
         Response::new().set(m)
     }
 
-    // pub fn headers(&self) -> &HeaderMap {
-    //     &self.headers
-    // }
-
-    // pub fn headers_mut(&mut self) -> &mut HeaderMap {
-    //     &mut self.headers
-    // }
-
-    // pub fn status_code(&self) -> &StatusCode {
-    //     &self.status
-    // }
-
-    // pub fn status_code_mut(&mut self) -> &mut StatusCode {
-    //     &mut self.status
-    // }
-
-    // pub fn body(&mut)
-
     pub(crate) fn write_back(self, resp: &mut HttpResponse<Body>, method: Method) {
         *resp.headers_mut() = self.headers;
         *resp.status_mut() = self.status;
 
-        let out = match (self.body, method) {
+        match (self.body, method) {
             (Some(body), _) => {
                 let content_type = resp.headers().get(header::CONTENT_TYPE).map_or_else(
                     || header::HeaderValue::from_static("text/plain"),

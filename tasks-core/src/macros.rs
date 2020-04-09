@@ -25,3 +25,43 @@ macro_rules! middleware {
         $crate::MiddlewareFn::new($m)
     };
 }
+
+#[macro_export]
+macro_rules! and {
+    [ $y: expr, $( $x:expr ),* ] => {
+        {
+            use $crate::MiddlewareExt;
+            let m = $y;
+            $(
+                let m = m.and($x);
+            )*
+            m
+        }
+     };
+
+     [ $y: expr] => {
+        {
+            $y
+        }
+     };
+}
+
+#[macro_export]
+macro_rules! or {
+    [ $y: expr, $( $x:expr ),* ] => {
+        {
+            use $crate::TaskExt;
+            let m = $y;
+            $(
+                let m = m.or($x);
+            )*
+            m
+        }
+     };
+
+     [ $y: expr] => {
+        {
+            $y
+        }
+     };
+}

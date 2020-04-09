@@ -2,7 +2,7 @@ use super::{Error, Request, Response};
 use async_compression::flate2::Compression;
 use async_compression::stream::{BrotliEncoder, DeflateEncoder, GzipEncoder};
 use futures::StreamExt;
-use headers::{ContentEncoding, ContentLength, ContentType, HeaderMapExt, HeaderValue};
+use headers::HeaderValue;
 use hyper::{header, Body};
 use std::future::Future;
 use std::pin::Pin;
