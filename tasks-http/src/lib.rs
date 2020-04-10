@@ -1,3 +1,5 @@
+#[cfg(feature = "compress")]
+mod compress;
 mod error;
 mod modifiers;
 mod mount;
@@ -6,12 +8,12 @@ mod request;
 mod response;
 mod server;
 mod service;
-mod transport;
-
-#[cfg(feature = "compress")]
-mod compress;
 #[cfg(feature = "tls")]
 mod tls;
+mod transport;
+#[cfg(feature = "ws")]
+mod ws;
+
 // Re-export;
 pub use http;
 pub use hyper;
@@ -23,6 +25,9 @@ pub use self::{error::*, modifiers::*, mount::*, request::*, response::*, server
 
 #[cfg(feature = "compress")]
 pub use compress::*;
+
+#[cfg(feature = "ws")]
+pub use ws::*;
 
 pub mod prelude {
     pub use super::{BoxError, Error, Request, Response};

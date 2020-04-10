@@ -94,6 +94,8 @@ impl<S: Serialize> Reply for Json<S> {
             Err(_) => unimplemented!("Not implemented"),
         };
 
+        let len = data.len();
+
         Response::with(StatusCode::OK)
             .set(data)
             .set(ContentType::json())

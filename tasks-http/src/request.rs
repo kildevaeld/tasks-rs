@@ -5,9 +5,15 @@ use hyper::{header, Body, Method, Request as HttpRequest, Version};
 use std::net::SocketAddr;
 use url::Url;
 
+enum BodyState {
+    Ready,
+    Taken,
+}
+
 pub struct Request {
     inner: HttpRequest<Body>,
     url: Url,
+    body_state: BodyState,
 }
 
 impl Request {
@@ -64,7 +70,11 @@ impl Request {
             }
         };
 
-        Request { inner: req, url }
+        Request {
+            inner: req,
+            url,
+            body_state: BodyState::Ready,
+        }
     }
 
     pub fn method(&self) -> &Method {
@@ -97,5 +107,16 @@ impl Request {
 
     pub fn cookie(&self) -> Option<Cookie> {
         self.headers().typed_get()
+    }
+
+    pub fn take_body(&mut self) -> Option<Body> {
+        match self.body_state {
+            BodyState::Ready => {
+                let body = std::mem::replace(self.inner.body_mut(), Body::empty());
+                self.body_state = BodyState::Taken;
+                Some(body)
+            }
+            BodyState::Taken => None,
+        }
     }
 }
