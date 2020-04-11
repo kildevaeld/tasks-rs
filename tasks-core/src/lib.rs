@@ -2,6 +2,7 @@
 mod macros;
 mod and;
 mod end;
+mod filter;
 mod map;
 mod middleware;
 mod middleware_ext;
