@@ -1,7 +1,7 @@
 use super::{And, End, Middleware, Task};
 
 pub trait MiddlewareExt<R>: Middleware<R> + Sized {
-    fn and<M: Middleware<R, Output = Self::Output, Error = Self::Error>>(
+    fn stack<M: Middleware<R, Output = Self::Output, Error = Self::Error>>(
         self,
         middleware: M,
     ) -> And<Self, M> {
