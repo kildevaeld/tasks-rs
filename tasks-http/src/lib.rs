@@ -14,6 +14,8 @@ mod transport;
 #[cfg(feature = "ws")]
 mod ws;
 
+pub mod filters;
+
 // Re-export;
 pub use http;
 pub use hyper;

@@ -30,7 +30,7 @@ pub struct FilterFn<F> {
 
 impl<F, R, U> Filter<R> for FilterFn<F>
 where
-    F: 'static + Sync + Send + Clone + Fn(&R) -> U,
+    F: 'static + Sync + Send + Clone + Fn(&mut R) -> U,
     U: TryFuture + Send,
     U::Ok: Tuple + Send,
     R: Sync + Send + 'static,
@@ -42,10 +42,10 @@ where
     type Future = Pin<Box<dyn Future<Output = Result<(R, Self::Extract), Self::Error>> + Send>>;
 
     #[inline]
-    fn filter(&self, req: R) -> Self::Future {
+    fn filter(&self, mut req: R) -> Self::Future {
         let func = self.func.clone();
         let future = async move {
-            let ret = func(&req).into_future().await?;
+            let ret = func(&mut req).into_future().await?;
             Ok((req, ret))
         };
 
@@ -56,7 +56,7 @@ where
 
 pub fn filter_fn<F, R, U>(func: F) -> FilterFn<F>
 where
-    F: Fn(&R) -> U,
+    F: Fn(&mut R) -> U,
     U: TryFuture,
     U::Ok: Tuple,
     //U::Error: IsReject,
@@ -66,13 +66,13 @@ where
 
 pub fn filter_fn_one<F, R, U>(
     func: F,
-) -> FilterFn<impl Fn(&R) -> future::MapOk<U, fn(U::Ok) -> (U::Ok,)> + Copy>
+) -> FilterFn<impl Fn(&mut R) -> future::MapOk<U, fn(U::Ok) -> (U::Ok,)> + Copy>
 where
-    F: Fn(&R) -> U + Copy,
+    F: Fn(&mut R) -> U + Copy,
     U: TryFuture,
     //U::Error: IsReject,
 {
-    filter_fn(move |route| func(route).map_ok(tup_one as _))
+    filter_fn(move |req| func(req).map_ok(tup_one as _))
 }
 
 fn tup_one<T>(item: T) -> (T,) {

@@ -1,5 +1,5 @@
+use super::filter::filter_fn_one;
 use super::{Map, Or, Task};
-
 pub trait TaskExt<R>: Task<R> + Sized {
     fn or<T: Task<R, Output = Self::Output, Error = Self::Error>>(self, task: T) -> Or<Self, T> {
         Or::new(self, task)
@@ -70,11 +70,11 @@ mod test {
         })
         .then(task!(|req: String| async move {
             let p: i32 = req.parse().unwrap();
-            Ok(p + 1)
+            Result::<_, Rejection<_, ()>>::Ok(p + 1)
+        }))
+        .then(task!(|req: i32| async move {
+            Result::<_, Rejection<i32, ()>>::Ok(req + 1)
         }));
-        // .then(task!(|req: i32| async move {
-        //     Result::<_, Rejection<_, ()>>::Ok(req + 1)
-        // }));
         // .then(task!(|req: i32| async move {
         //     Result::<_, Rejection<i32, ()>>::Ok(format!("{}", req))
         // }));

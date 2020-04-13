@@ -15,8 +15,8 @@ mod test {
 
     #[test]
     fn test_filter() {
-        let f = filter_fn_one(|req: &String| async { Result::<_, ()>::Ok("Hello, World") })
-            .and(filter_fn_one(|req: &String| async {
+        let f = filter_fn_one(|req: &mut String| async { Result::<_, ()>::Ok("Hello, World") })
+            .and(filter_fn_one(|req: &mut String| async {
                 Result::<_, ()>::Ok("Hello, World2")
             }))
             .map(|req1, req2| format!("{} {}", req1, req2))

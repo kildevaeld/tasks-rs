@@ -23,7 +23,7 @@ where
     T2: Send + Clone + Task<<T1 as Task<R>>::Output, Error = <T1 as Task<R>>::Error>,
 {
     type Output = T2::Output;
-    type Error = MapError<T2::Error>;
+    type Error = T2::Error;
     type Future = MapFuture<T1, T2, R>;
 
     fn run(&self, req: R) -> Self::Future {
@@ -69,7 +69,7 @@ where
     T1: Task<R>,
     T2: Clone + Task<<T1 as Task<R>>::Output, Error = <T1 as Task<R>>::Error>,
 {
-    type Output = Result<T2::Output, Rejection<R, MapError<T2::Error>>>;
+    type Output = Result<T2::Output, Rejection<R, T2::Error>>;
     #[project]
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         loop {
@@ -78,9 +78,7 @@ where
             let fut2 = match pin.state.project() {
                 MapFutureState::First(first, second) => match ready!(first.try_poll(cx)) {
                     Ok(ret) => second.run(ret),
-                    Err(Rejection::Err(err)) => {
-                        return Poll::Ready(Err(Rejection::Err(MapError::Err(err))))
-                    }
+                    Err(Rejection::Err(err)) => return Poll::Ready(Err(Rejection::Err(err))),
                     Err(Rejection::Reject(ret)) => return Poll::Ready(Err(Rejection::Reject(ret))),
                 },
                 MapFutureState::Second(fut) => match ready!(fut.try_poll(cx)) {
@@ -90,11 +88,10 @@ where
                         });
                         return Poll::Ready(Ok(some));
                     }
-                    Err(Rejection::Err(err)) => {
-                        return Poll::Ready(Err(Rejection::Err(MapError::Err(err))))
-                    }
+                    Err(Rejection::Err(err)) => return Poll::Ready(Err(Rejection::Err(err))),
                     Err(Rejection::Reject(_)) => {
-                        return Poll::Ready(Err(Rejection::Err(MapError::Reject)))
+                        panic!("should propragate cause");
+                        //return Poll::Ready(Err(Rejection::Err(MapError::Reject)))
                     }
                 },
                 MapFutureState::Done => panic!("poll after done"),
@@ -107,8 +104,8 @@ where
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum MapError<E> {
-    Err(E),
-    Reject,
-}
+// #[derive(Debug, PartialEq)]
+// pub enum MapError<E> {
+//     Err(E),
+//     Reject,
+// }
