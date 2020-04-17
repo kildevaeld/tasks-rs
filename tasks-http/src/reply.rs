@@ -1,12 +1,32 @@
 use super::modifiers::{ContentLength, ContentType};
-use super::Response;
+use super::{Request, Response};
 use http::StatusCode;
 use modifier::Set;
 #[cfg(feature = "json")]
 use serde::Serialize;
 
+use tasks_core::One;
+
 pub trait Reply {
     fn into_response(self) -> Response;
+}
+
+impl<T> Reply for One<T>
+where
+    T: Reply,
+{
+    fn into_response(self) -> Response {
+        self.0.into_response()
+    }
+}
+
+impl<T> Reply for (Request, One<T>)
+where
+    T: Reply,
+{
+    fn into_response(self) -> Response {
+        self.1.into_response()
+    }
 }
 
 impl Reply for Response {
@@ -53,6 +73,17 @@ pub fn text<'a>(body: &'a str) -> Text<'a> {
 }
 
 impl<'a> Reply for &'a str {
+    #[inline(always)]
+    fn into_response(self) -> Response {
+        let len = self.len();
+        Response::with(StatusCode::OK)
+            .set(self)
+            .set(ContentType::text())
+            .set(ContentLength(len as u64))
+    }
+}
+
+impl Reply for String {
     #[inline(always)]
     fn into_response(self) -> Response {
         let len = self.len();

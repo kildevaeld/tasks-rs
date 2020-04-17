@@ -2,11 +2,9 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
+use crate::{Extract, Func, Rejection, Task};
 use futures_core::{ready, TryFuture};
 use pin_project::{pin_project, project};
-
-use super::Extract;
-use crate::{Func, Rejection, Task};
 // use crate::reject::CombineRejection;
 
 #[derive(Clone, Copy, Debug)]

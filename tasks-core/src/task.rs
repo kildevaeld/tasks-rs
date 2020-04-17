@@ -36,6 +36,8 @@ where
     }
 }
 
+impl<F, I, O, E> Copy for TaskFn<F, I, O, E> where F: Copy {}
+
 impl<F, I, O, E, U> TaskFn<F, I, O, E>
 where
     F: Fn(I) -> U,

@@ -8,14 +8,14 @@ macro_rules! task {
 #[macro_export]
 macro_rules! reject {
     ($req: expr) => {
-        return Err(Rejection::Reject($req));
+        return Err($crate::Rejection::Reject($req));
     };
 }
 
 #[macro_export]
 macro_rules! fail {
     ($err: expr) => {
-        return Err(Rejection::Err($err));
+        return Err($crate::Rejection::Err($err));
     };
 }
 

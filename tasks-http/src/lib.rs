@@ -32,6 +32,7 @@ pub use compress::*;
 pub use ws::*;
 
 pub mod prelude {
+    pub use super::filters;
     pub use super::{BoxError, Error, Request, Response};
     pub use hyper::{HeaderMap, StatusCode};
     pub use modifier::Set;

@@ -4,7 +4,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use crate::{one, Func, One};
+use crate::{Func, One};
 
 use crate::task::{Rejection, Task};
 use pin_project::pin_project;

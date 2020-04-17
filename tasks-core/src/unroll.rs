@@ -6,6 +6,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
+#[derive(Clone)]
 pub struct Unroll<T>(pub(crate) T);
 
 impl<T, R> Task<R> for Unroll<T>

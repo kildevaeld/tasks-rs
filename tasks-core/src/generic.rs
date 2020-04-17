@@ -4,7 +4,7 @@ pub struct Product<H, T: HList>(pub(crate) H, pub(crate) T);
 pub type One<T> = (T,);
 
 #[inline]
-pub(crate) fn one<T>(val: T) -> One<T> {
+pub fn one<T>(val: T) -> One<T> {
     (val,)
 }
 
@@ -12,6 +12,22 @@ pub(crate) fn one<T>(val: T) -> One<T> {
 pub enum Either<T, U> {
     A(T),
     B(U),
+}
+
+pub trait Extract<R>: Sized {
+    type Extract: Tuple + Send;
+    fn unpack(self) -> (R, Self::Extract);
+}
+
+impl<R, U> Extract<R> for (R, U)
+where
+    U: Tuple + Send,
+{
+    type Extract = U;
+    #[inline(always)]
+    fn unpack(self) -> (R, Self::Extract) {
+        self
+    }
 }
 
 // Converts Product (and ()) into tuples.
