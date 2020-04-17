@@ -5,7 +5,7 @@ use modifier::Set;
 #[cfg(feature = "json")]
 use serde::Serialize;
 
-use tasks_core::One;
+use tasks_core::{Either, One};
 
 pub trait Reply {
     fn into_response(self) -> Response;
@@ -33,6 +33,20 @@ impl Reply for Response {
     #[inline(always)]
     fn into_response(self) -> Response {
         self
+    }
+}
+
+impl<T, U> Reply for Either<T, U>
+where
+    T: Reply,
+    U: Reply,
+{
+    #[inline(always)]
+    fn into_response(self) -> Response {
+        match self {
+            Either::A(a) => a.into_response(),
+            Either::B(b) => b.into_response(),
+        }
     }
 }
 

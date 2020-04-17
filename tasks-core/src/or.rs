@@ -1,4 +1,4 @@
-use super::{Rejection, Task};
+use super::{Either, Rejection, Task};
 use futures_core::{ready, TryFuture};
 use pin_project::{pin_project, project};
 use std::future::Future;
@@ -20,9 +20,9 @@ impl<T1, T2> Or<T1, T2> {
 impl<T1, T2, R> Task<R> for Or<T1, T2>
 where
     T1: Task<R>,
-    T2: Send + Clone + Task<R, Output = <T1 as Task<R>>::Output, Error = <T1 as Task<R>>::Error>,
+    T2: Send + Clone + Task<R, Error = <T1 as Task<R>>::Error>,
 {
-    type Output = T1::Output;
+    type Output = Either<T1::Output, T2::Output>;
     type Error = T1::Error;
     type Future = OrFuture<T1, T2, R>;
 
@@ -37,7 +37,7 @@ where
 enum OrFutureState<T1, T2, R>
 where
     T1: Task<R>,
-    T2: Task<R, Output = <T1 as Task<R>>::Output, Error = <T1 as Task<R>>::Error>,
+    T2: Task<R, Error = <T1 as Task<R>>::Error>,
 {
     First(#[pin] T1::Future, T2),
     Second(#[pin] T2::Future),
@@ -48,7 +48,7 @@ where
 pub struct OrFuture<T1, T2, R>
 where
     T1: Task<R>,
-    T2: Task<R, Output = <T1 as Task<R>>::Output, Error = <T1 as Task<R>>::Error>,
+    T2: Task<R, Error = <T1 as Task<R>>::Error>,
 {
     #[pin]
     state: OrFutureState<T1, T2, R>,
@@ -57,9 +57,9 @@ where
 impl<T1, T2, R> Future for OrFuture<T1, T2, R>
 where
     T1: Task<R>,
-    T2: Task<R, Output = <T1 as Task<R>>::Output, Error = <T1 as Task<R>>::Error>,
+    T2: Task<R, Error = <T1 as Task<R>>::Error>,
 {
-    type Output = Result<T1::Output, Rejection<R, T1::Error>>;
+    type Output = Result<Either<T1::Output, T2::Output>, Rejection<R, T1::Error>>;
 
     #[project]
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
@@ -72,7 +72,7 @@ where
                         self.set(OrFuture {
                             state: OrFutureState::Done,
                         });
-                        return Poll::Ready(Ok(ret));
+                        return Poll::Ready(Ok(Either::A(ret)));
                     }
                     Err(Rejection::Err(err)) => return Poll::Ready(Err(Rejection::Err(err))),
                     Err(Rejection::Reject(req)) => second.run(req),
@@ -82,7 +82,7 @@ where
                         self.set(OrFuture {
                             state: OrFutureState::Done,
                         });
-                        return Poll::Ready(Ok(some));
+                        return Poll::Ready(Ok(Either::B(some)));
                     }
                     Err(err) => return Poll::Ready(Err(err)),
                 },

@@ -3,7 +3,7 @@ use super::{And, AndThen, Combine, Extract, Func, Map, Or, Pipe, Task, Tuple, Un
 use futures_core::TryFuture;
 
 pub trait TaskExt<R>: Task<R> + Sized {
-    fn or<T: Task<R, Output = Self::Output, Error = Self::Error>>(self, task: T) -> Or<Self, T> {
+    fn or<T: Task<R, Error = Self::Error>>(self, task: T) -> Or<Self, T> {
         Or::new(self, task)
     }
 
