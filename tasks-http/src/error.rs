@@ -2,6 +2,7 @@ use super::{Request, Response};
 use modifier::Modifier;
 use std::error::Error as StdError;
 use std::fmt;
+use std::path::PathBuf;
 use tasks_core::Rejection;
 
 pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
@@ -48,5 +49,38 @@ impl StdError for Error {}
 impl From<Error> for Rejection<Request, Error> {
     fn from(error: Error) -> Rejection<Request, Error> {
         Rejection::Err(error)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum KnownError {
+    InvalidHeader(String),
+    FilePermission(Option<PathBuf>),
+    FileOpen(Option<PathBuf>),
+    NotFound,
+}
+
+impl fmt::Display for KnownError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            KnownError::InvalidHeader(name) => write!(f, "invalid header: {}", name),
+            KnownError::FilePermission(path) => write!(f, "file permission: {:?}", path),
+            KnownError::FileOpen(path) => write!(f, "file open {:?}", path),
+            KnownError::NotFound => write!(f, "not found"),
+        }
+    }
+}
+
+impl StdError for KnownError {}
+
+impl From<KnownError> for Error {
+    fn from(error: KnownError) -> Error {
+        Error::new(error)
+    }
+}
+
+impl From<KnownError> for Rejection<Request, Error> {
+    fn from(error: KnownError) -> Self {
+        Error::new(error).into()
     }
 }

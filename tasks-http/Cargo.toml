@@ -29,6 +29,7 @@ serde = { version = "1", features = [ "derive" ], optional = true }
 serde_json = { version = "1", optional = true }
 tokio-tungstenite = { version = "0.10", optional = true }
 serde_qs = { version = "0.5", optional = true }
+urlencoding = { version = "1", optional = true }
 
 [dev-dependencies]
 tokio = { version = "0.2", features = ["macros"] }
@@ -43,7 +44,8 @@ full = [
     "uds",
     "ws",
     "json",
-    "qs"
+    "qs",
+    "statics"
 ]
 tls = [ "tokio-rustls" ]
 compress = [ "async-compression" ]
@@ -51,3 +53,4 @@ uds = [ "tokio/uds" ]
 json = [ "serde", "serde_json" ]
 ws = [ "tokio-tungstenite" ]
 qs = [ "serde", "serde_qs" ]
+statics = [ "tokio/fs", "urlencoding" ]

@@ -1,4 +1,4 @@
-use super::{Error, Request, Response};
+use super::{reply::Reply, Error, Request, Response};
 use futures::future::{self, Ready};
 use tasks_core::{
     util::{OneOf2Future, Promise},
@@ -8,7 +8,8 @@ use url::Url;
 
 pub fn mount<S: AsRef<str>, T>(path: S, task: T) -> Mount<T>
 where
-    T: Task<Request, Output = Response, Error = Error>,
+    T: Task<Request, Error = Error>,
+    T::Output: Reply + Send,
 {
     Mount::new(path, task)
 }
@@ -71,15 +72,16 @@ impl<T> Mount<T> {
 
 impl<T> Task<Request> for Mount<T>
 where
-    T: Task<Request, Output = Response, Error = Error>,
+    T: Task<Request, Error = Error>,
+    T::Output: Reply + Send,
 {
-    type Output = Response;
+    type Output = T::Output;
     type Error = Error;
 
     type Future = OneOf2Future<
         T::Future,
-        Ready<Result<Response, Rejection<Request, Error>>>,
-        Result<Response, Rejection<Request, Error>>,
+        Ready<Result<Self::Output, Rejection<Request, Error>>>,
+        Result<Self::Output, Rejection<Request, Error>>,
     >;
 
     #[inline(always)]

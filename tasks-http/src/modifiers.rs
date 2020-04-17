@@ -1,7 +1,7 @@
 use super::{Request, Response};
 pub use headers::{
-    CacheControl, Connection, ContentLength, ContentType, ETag, Expires, HeaderMapExt, Location,
-    SecWebsocketAccept, Upgrade, UserAgent,
+    AcceptRanges, CacheControl, Connection, ContentLength, ContentRange, ContentType, ETag,
+    Expires, HeaderMapExt, LastModified, Location, SecWebsocketAccept, Upgrade, UserAgent,
 };
 use http::{header, StatusCode};
 use hyper::Body;
@@ -82,6 +82,9 @@ typed_header_impl!(Expires);
 typed_header_impl!(Upgrade);
 typed_header_impl!(Connection);
 typed_header_impl!(SecWebsocketAccept);
+typed_header_impl!(ContentRange);
+typed_header_impl!(AcceptRanges);
+typed_header_impl!(LastModified);
 /// A modifier for creating redirect responses.
 pub struct Redirect(pub Url);
 

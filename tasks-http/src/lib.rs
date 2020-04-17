@@ -15,6 +15,7 @@ mod transport;
 mod ws;
 
 pub mod filters;
+pub mod handlers;
 
 // Re-export;
 pub use http;
