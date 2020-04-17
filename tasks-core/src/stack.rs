@@ -6,18 +6,18 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 
 #[derive(Clone)]
-pub struct And<M1, M2> {
+pub struct Stack<M1, M2> {
     m1: M1,
     m2: M2,
 }
 
-impl<M1, M2> And<M1, M2> {
-    pub fn new(m1: M1, m2: M2) -> And<M1, M2> {
-        And { m1, m2 }
+impl<M1, M2> Stack<M1, M2> {
+    pub fn new(m1: M1, m2: M2) -> Stack<M1, M2> {
+        Stack { m1, m2 }
     }
 }
 
-impl<M1, M2, R> Middleware<R> for And<M1, M2>
+impl<M1, M2, R> Middleware<R> for Stack<M1, M2>
 where
     M1: Send + Middleware<R>,
     M2: 'static
@@ -36,23 +36,23 @@ where
         req: R,
         next: N,
     ) -> Self::Future {
-        self.m1.run(req, AndNext::new(self.m2.clone(), next))
+        self.m1.run(req, StackNext::new(self.m2.clone(), next))
     }
 }
 
 #[derive(Clone)]
-pub(crate) struct AndNext<M, N> {
+pub(crate) struct StackNext<M, N> {
     m: M,
     n: N,
 }
 
-impl<M, N> AndNext<M, N> {
-    pub fn new(m: M, n: N) -> AndNext<M, N> {
-        AndNext { m, n }
+impl<M, N> StackNext<M, N> {
+    pub fn new(m: M, n: N) -> StackNext<M, N> {
+        StackNext { m, n }
     }
 }
 
-impl<M, N, R> Next<R> for AndNext<M, N>
+impl<M, N, R> Next<R> for StackNext<M, N>
 where
     M: 'static + Send + Sync + Middleware<R>,
     N: 'static
@@ -68,7 +68,7 @@ where
         &self,
         req: R,
     ) -> Pin<Box<dyn Future<Output = Result<Self::Output, Rejection<R, Self::Error>>> + Send>> {
-        let next: AndNextFuture<M, R> = AndNextFuture {
+        let next: StackNextFuture<M, R> = StackNextFuture {
             future: self.m.run(req, self.n.clone()),
         };
         Box::pin(next)
@@ -76,7 +76,7 @@ where
 }
 
 #[pin_project]
-struct AndNextFuture<M, R>
+struct StackNextFuture<M, R>
 where
     M: Middleware<R>,
 {
@@ -84,7 +84,7 @@ where
     future: M::Future,
 }
 
-impl<M, R> Future for AndNextFuture<M, R>
+impl<M, R> Future for StackNextFuture<M, R>
 where
     M: Middleware<R>,
 {

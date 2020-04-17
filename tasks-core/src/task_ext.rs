@@ -1,12 +1,13 @@
-use super::filter::filter_fn_one;
-use super::{Map, Or, Task};
+// use super::filter::filter_fn_one;
+use super::{Or, Pipe, Task};
+
 pub trait TaskExt<R>: Task<R> + Sized {
     fn or<T: Task<R, Output = Self::Output, Error = Self::Error>>(self, task: T) -> Or<Self, T> {
         Or::new(self, task)
     }
 
-    fn then<T: Task<Self::Output>>(self, task: T) -> Map<Self, T> {
-        Map::new(self, task)
+    fn then<T: Task<Self::Output>>(self, task: T) -> Pipe<Self, T> {
+        Pipe::new(self, task)
     }
 }
 
@@ -80,6 +81,6 @@ mod test {
         // }));
 
         let ret = futures::executor::block_on(t.run(1));
-        assert_eq!(ret, Ok(3));
+        assert_eq!(ret, Ok(4));
     }
 }

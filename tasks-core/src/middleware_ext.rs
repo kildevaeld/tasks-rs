@@ -1,11 +1,11 @@
-use super::{And, End, Middleware, Task};
+use super::{End, Middleware, Stack, Task};
 
 pub trait MiddlewareExt<R>: Middleware<R> + Sized {
     fn stack<M: Middleware<R, Output = Self::Output, Error = Self::Error>>(
         self,
         middleware: M,
-    ) -> And<Self, M> {
-        And::new(self, middleware)
+    ) -> Stack<Self, M> {
+        Stack::new(self, middleware)
     }
 
     fn end<T: Task<R, Output = Self::Output, Error = Self::Error>>(self, task: T) -> End<Self, T> {
