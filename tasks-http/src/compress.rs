@@ -6,7 +6,7 @@ use headers::HeaderValue;
 use hyper::{header, Body};
 use std::future::Future;
 use std::pin::Pin;
-use tasks_core::{Middleware, Next, Rejection};
+use tasks::{Middleware, Next, Rejection};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Compress;

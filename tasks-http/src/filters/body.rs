@@ -1,11 +1,11 @@
 use crate::{Error, Request};
-use bytes::{buf::BufExt, Buf, Bytes};
-use futures::{future, FutureExt, TryFutureExt};
+use bytes::{buf::BufExt, Buf};
+use futures::{future, TryFutureExt};
 use hyper::Body;
 #[cfg(feature = "json")]
 use serde::de::DeserializeOwned;
 use std::fmt;
-use tasks_core::{filter_fn_one, Task, TaskExt};
+use tasks::{filter_fn_one, Task, TaskExt};
 
 #[derive(Debug)]
 pub struct BodyReadError(hyper::Error);

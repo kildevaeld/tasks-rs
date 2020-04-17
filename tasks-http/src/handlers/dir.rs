@@ -3,7 +3,7 @@ use crate::{Error, KnownError, Request};
 use futures::{future, TryFutureExt};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tasks_core::{One, Task, TaskExt};
+use tasks::{One, Task, TaskExt};
 use urlencoding::decode;
 
 pub fn dir(

@@ -12,7 +12,7 @@ use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use tasks_core::{Rejection, Task};
+use tasks::{Rejection, Task};
 
 pub fn service<F>(filter: F) -> TaskService<F>
 where

@@ -1,10 +1,6 @@
-use crate::{reply::Reply, Error, Request, Response};
-use futures::future::{self, Ready};
-use tasks_core::{
-    filter_fn_one,
-    util::{OneOf2Future, Promise},
-    Rejection, Task, TaskExt,
-};
+use crate::{Error, Request};
+use futures::future::{self};
+use tasks::{filter_fn_one, Rejection, Task};
 use url::Url;
 
 pub fn mount<S: AsRef<str>>(path: S) -> Mount {

@@ -1,5 +1,5 @@
 use super::{reply::Reply, Error, Request};
-use tasks_core::{task, Rejection, Task, TaskExt};
+use tasks::{task, Rejection, Task, TaskExt};
 
 pub fn mount<S: AsRef<str>, T>(
     path: S,

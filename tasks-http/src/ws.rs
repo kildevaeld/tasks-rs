@@ -13,7 +13,7 @@ use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use tasks_core::{reject, util, Rejection, Task};
+use tasks::{reject, util, Rejection, Task};
 use tokio_tungstenite::{
     tungstenite::protocol::{self, WebSocketConfig},
     WebSocketStream,

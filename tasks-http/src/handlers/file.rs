@@ -22,7 +22,7 @@ use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::Poll;
-use tasks_core::{Task, TaskExt};
+use tasks::{Task, TaskExt};
 use tokio::fs;
 
 pub fn file<P: AsRef<Path>>(

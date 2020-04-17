@@ -3,7 +3,7 @@ use modifier::Modifier;
 use std::error::Error as StdError;
 use std::fmt;
 use std::path::PathBuf;
-use tasks_core::Rejection;
+use tasks::Rejection;
 
 pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
 

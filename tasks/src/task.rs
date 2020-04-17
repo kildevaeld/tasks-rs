@@ -1,111 +1,67 @@
-use futures_util::future::Ready;
 use std::future::Future;
 use std::marker::PhantomData;
 
-pub trait Task<Input> {
+#[derive(Debug, PartialEq)]
+pub enum Rejection<R, E> {
+    Err(E),
+    Reject(R),
+}
+
+pub trait Task<R> {
     type Output;
     type Error;
-    type Future: Future<Output = Result<Self::Output, Self::Error>> + Send + 'static;
+    type Future: Future<Output = Result<Self::Output, Rejection<R, Self::Error>>> + Send;
 
-    fn exec(&self, input: Input) -> Self::Future;
-    fn can_exec(&self, input: &Input) -> bool;
+    fn run(&self, req: R) -> Self::Future;
 }
 
-pub trait IntoTask<I> {
-    type Output;
-    type Error;
-    type Future: Future<Output = Result<Self::Output, Self::Error>> + Send + 'static;
-    type Task: Task<I, Output = Self::Output, Error = Self::Error, Future = Self::Future>;
-
-    fn into_task(self) -> Self::Task;
+pub struct TaskFn<F, I, O, E> {
+    f: F,
+    _i: PhantomData<I>,
+    _o: PhantomData<O>,
+    _e: PhantomData<E>,
 }
 
-impl<T: Task<I>, I> IntoTask<I> for T {
-    type Output = T::Output;
-    type Error = T::Error;
-    type Future = T::Future;
-    type Task = T;
-    fn into_task(self) -> Self::Task {
-        self
-    }
-}
-
-#[derive(Clone)]
-pub struct TaskFn<F, I, O, E, C> {
-    inner: F,
-    _i: std::marker::PhantomData<I>,
-    _o: std::marker::PhantomData<O>,
-    _e: std::marker::PhantomData<E>,
-    check: C,
-}
-
-impl<F, I, O, E, C, U> TaskFn<F, I, O, E, C>
+impl<F, I, O, E> Clone for TaskFn<F, I, O, E>
 where
-    F: Fn(I) -> U,
-    U: Future<Output = Result<O, E>> + Send + 'static,
-    C: Fn(&I) -> bool,
+    F: Clone,
 {
-    pub fn new(service: F, check: C) -> TaskFn<F, I, O, E, C> {
+    fn clone(&self) -> Self {
         TaskFn {
-            inner: service,
-            _i: std::marker::PhantomData,
-            _o: std::marker::PhantomData,
-            _e: std::marker::PhantomData,
-            check,
+            f: self.f.clone(),
+            _i: PhantomData,
+            _o: PhantomData,
+            _e: PhantomData,
         }
     }
 }
 
-impl<F, I, O, E, C, U> Task<I> for TaskFn<F, I, O, E, C>
+impl<F, I, O, E> Copy for TaskFn<F, I, O, E> where F: Copy {}
+
+impl<F, I, O, E, U> TaskFn<F, I, O, E>
 where
     F: Fn(I) -> U,
-    U: Future<Output = Result<O, E>> + Send + 'static,
-    C: Fn(&I) -> bool,
+    U: Future<Output = Result<O, Rejection<I, E>>> + Send + 'static,
+{
+    pub fn new(task: F) -> TaskFn<F, I, O, E> {
+        TaskFn {
+            f: task,
+            _i: PhantomData,
+            _o: PhantomData,
+            _e: PhantomData,
+        }
+    }
+}
+
+impl<F, I, O, E, U> Task<I> for TaskFn<F, I, O, E>
+where
+    F: Fn(I) -> U,
+    U: Future<Output = Result<O, Rejection<I, E>>> + Send,
 {
     type Output = O;
     type Error = E;
     type Future = U;
-
-    fn exec(&self, input: I) -> Self::Future {
-        (self.inner)(input)
+    fn run(&self, input: I) -> Self::Future {
+        (self.f)(input)
     }
-
-    fn can_exec(&self, input: &I) -> bool {
-        (self.check)(input)
-    }
-}
-
-pub struct Transform<FROM, TO, ERROR, C>(C, PhantomData<FROM>, PhantomData<TO>, PhantomData<ERROR>);
-
-impl<FROM, TO, ERROR, C> Transform<FROM, TO, ERROR, C> {
-    pub fn new(trans: C) -> Transform<FROM, TO, ERROR, C> {
-        Transform(trans, PhantomData, PhantomData, PhantomData)
-    }
-}
-
-impl<FROM: Send + Sync + 'static, TO: Send + 'static, ERROR: Send + 'static, C> Task<FROM>
-    for Transform<FROM, TO, ERROR, C>
-where
-    C: Fn(FROM) -> TO,
-{
-    type Output = TO;
-    type Error = ERROR;
-    type Future = Ready<Result<TO, ERROR>>;
-
-    #[inline]
-    fn exec(&self, input: FROM) -> Self::Future {
-        let out = (self.0)(input);
-        futures_util::future::ok(out)
-    }
-
-    #[inline]
-    fn can_exec(&self, _input: &FROM) -> bool {
-        true
-    }
-}
-
-
-pub enum Rejection<R, E> {
-    Error(E),
-    Reject(R)
 }

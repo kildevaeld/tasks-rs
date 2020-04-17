@@ -21,7 +21,7 @@ pub mod handlers;
 pub use http;
 pub use hyper;
 pub use modifier;
-pub use tasks_core as tasks;
+pub use tasks;
 pub use url;
 
 pub use self::{error::*, modifiers::*, mount::*, request::*, response::*, server::*, service::*};
@@ -37,5 +37,5 @@ pub mod prelude {
     pub use super::{BoxError, Error, Request, Response};
     pub use hyper::{HeaderMap, StatusCode};
     pub use modifier::Set;
-    pub use tasks_core::{middleware, task, Middleware, MiddlewareExt, Next, Task, TaskExt};
+    pub use tasks::{middleware, task, Middleware, MiddlewareExt, Next, Task, TaskExt};
 }

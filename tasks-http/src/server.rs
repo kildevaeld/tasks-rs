@@ -23,7 +23,7 @@ use super::{Request, Response};
 // use super::TaskService;
 use super::reply::Reply;
 use crate::transport::Transport;
-use tasks_core::Task;
+use tasks::Task;
 
 /// Create a `Server` with the provided `Filter`.
 pub fn serve<T>(task: T) -> Server<T>

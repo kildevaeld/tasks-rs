@@ -1,4 +1,3 @@
-use tasks_core::{reject, task, Rejection, TaskExt};
 use tasks_http::prelude::*;
 use tokio;
 

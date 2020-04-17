@@ -5,7 +5,7 @@ use hyper::Method;
 use serde::de::DeserializeOwned;
 #[cfg(feature = "qs")]
 use serde_qs;
-use tasks_core::{filter_fn_one, task, Rejection, Task};
+use tasks::{filter_fn_one, task, Rejection, Task};
 use url::Url;
 
 pub fn url() -> impl Task<Request, Output = (Request, (Url,)), Error = Error> + Copy {

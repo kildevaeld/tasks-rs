@@ -1,136 +1,27 @@
-use futures_channel::oneshot::{channel, Receiver, Sender};
-use std::error::Error;
-use std::fmt;
+use super::Rejection;
 use std::future::Future;
+use std::marker::PhantomData;
 use std::pin::Pin;
-use std::task::{Context, Poll};
-use pin_project::pin_project;
 
-pub struct Next<Req, Res, Err> {
-    ret: Receiver<Result<Res, Err>>,
-    pub(crate) send: Sender<Req>,
-}
-
-impl<Req, Res, Err> Next<Req, Res, Err> {
-    pub(crate) fn new() -> (Next<Req, Res, Err>, Sender<Result<Res, Err>>, Receiver<Req>) {
-        let (sx1, rx1) = channel();
-        let (sx2, rx2) = channel();
-        (
-            Next {
-                ret: rx1,
-                send: sx2,
-            },
-            sx1,
-            rx2,
-        )
-    }
-
-    pub fn exec(self, req: Req) -> NextFuture<Res, Err> {
-        if self.send.send(req).is_err() {
-            // NextFuture { inner: None }
-            panic!("should not happen");
-        } else {
-            NextFuture::new(self.ret)
-        }
-    }
-}
-
-#[pin_project]
-pub struct NextFuture<Res, Err> {
-    #[pin]
-    pub(crate) inner: Receiver<Result<Res, Err>>,
-}
-
-impl<Res, Err> NextFuture<Res, Err> {
-    //unsafe_pinned!(inner: Receiver<Result<Res, Err>>);
-    pub fn new(chan: Receiver<Result<Res, Err>>) -> NextFuture<Res, Err> {
-        NextFuture { inner: chan }
-    }
-}
-
-impl<Res, Err> Future for NextFuture<Res, Err> {
-    type Output = Result<Res, Err>;
-
-    fn poll(self: Pin<&mut Self>, waker: &mut Context<'_>) -> Poll<Self::Output> {
-        let this = self.project();
-        match this.inner.poll(waker) {
-            Poll::Pending => Poll::Pending,
-            Poll::Ready(Ok(s)) => Poll::Ready(s),
-            Poll::Ready(Err(e)) => panic!("channel closed {:?}", e),
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct ChannelErr;
-
-impl fmt::Display for ChannelErr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str("Internal Server Error.")
-    }
-}
-
-impl Error for ChannelErr {
-    fn description(&self) -> &str {
-        "Internal Server Error"
-    }
-}
-
-pub trait Middleware<INPUT> {
-    //type Input;
+pub trait Next<Req>: Send + Sync {
     type Output;
     type Error;
-    type Future: Future<Output = Result<Self::Output, Self::Error>> + Send + 'static;
-    fn execute(
+    fn run(
         &self,
-        req: INPUT,
-        next: Next<INPUT, Self::Output, Self::Error>,
+        req: Req,
+    ) -> Pin<Box<dyn Future<Output = Result<Self::Output, Rejection<Req, Self::Error>>> + Send>>;
+}
+
+pub trait Middleware<R> {
+    type Output;
+    type Error;
+    type Future: Future<Output = Result<Self::Output, Rejection<R, Self::Error>>> + Send;
+    fn run<N: Clone + 'static + Next<R, Output = Self::Output, Error = Self::Error>>(
+        &self,
+        req: R,
+        next: N,
     ) -> Self::Future;
 }
-
-pub trait IntoMiddleware<INPUT> {
-    type Output;
-    type Error;
-    type Future: Future<Output = Result<Self::Output, Self::Error>> + Send + 'static;
-    type Middleware: Middleware<
-        INPUT,
-        Output = Self::Output,
-        Error = Self::Error,
-        Future = Self::Future,
-    >;
-    fn into_middleware(self) -> Self::Middleware;
-}
-
-impl<T, I> IntoMiddleware<I> for T
-where
-    T: Middleware<I>,
-{
-    type Output = T::Output;
-    type Error = T::Error;
-    type Future = T::Future;
-    type Middleware = T;
-    fn into_middleware(self) -> Self::Middleware {
-        self
-    }
-}
-
-impl<T, I> Middleware<I> for std::sync::Arc<T>
-where
-    T: Middleware<I>,
-{
-    type Output = T::Output;
-    type Error = T::Error;
-    type Future = T::Future;
-    fn execute(
-        &self,
-        req: I,
-        next: Next<I, Self::Output, Self::Error>,
-    ) -> Self::Future {
-        self.as_ref().execute(req, next)
-    }
-}
-
-use std::marker::PhantomData;
 
 pub struct MiddlewareFn<F, I, O, E> {
     inner: F,
@@ -139,10 +30,24 @@ pub struct MiddlewareFn<F, I, O, E> {
     _e: PhantomData<E>,
 }
 
+impl<F, I, O, E> Clone for MiddlewareFn<F, I, O, E>
+where
+    F: Clone,
+{
+    fn clone(&self) -> Self {
+        MiddlewareFn {
+            inner: self.inner.clone(),
+            _i: PhantomData,
+            _o: PhantomData,
+            _e: PhantomData,
+        }
+    }
+}
+
 impl<F, I, O, E, U> MiddlewareFn<F, I, O, E>
 where
-    F: (Fn(I, Next<I, O, E>) -> U) + Send + Sync + std::marker::Unpin,
-    U: Future<Output = Result<O, E>> + Send + 'static,
+    F: (Fn(I, NextFn<I, O, E>) -> U) + Send + std::marker::Unpin,
+    U: Future<Output = Result<O, Rejection<I, E>>> + Send + 'static,
 {
     pub fn new(middleware: F) -> MiddlewareFn<F, I, O, E> {
         MiddlewareFn {
@@ -156,27 +61,38 @@ where
 
 impl<F, I, O, E, U> Middleware<I> for MiddlewareFn<F, I, O, E>
 where
-    F: (Fn(I, Next<I, O, E>) -> U) + Send + Sync + std::marker::Unpin,
-    U: Future<Output = Result<O, E>> + Send + 'static,
+    F: (Fn(I, NextFn<I, O, E>) -> U) + Send + std::marker::Unpin,
+    U: Future<Output = Result<O, Rejection<I, E>>> + Send + 'static,
 {
     type Output = O;
     type Error = E;
     type Future = U;
 
-    fn execute(&self, req: I, next: Next<I, O, E>) -> Self::Future {
-        (self.inner)(req, next)
+    fn run<N: Clone + 'static + Next<I, Output = Self::Output, Error = Self::Error>>(
+        &self,
+        req: I,
+        next: N,
+    ) -> Self::Future {
+        (self.inner)(
+            req,
+            NextFn {
+                inner: Box::new(next),
+            },
+        )
     }
 }
 
-pub fn middleware_fn<F, I, O, E, U>(f: F) -> MiddlewareFn<F, I, O, E>
-where
-    F: (Fn(I, Next<I, O, E>) -> U) + Send + Sync + std::marker::Unpin,
-    U: Future<Output = Result<O, E>> + Send + 'static,
-{
-    MiddlewareFn {
-        inner: f,
-        _i: PhantomData,
-        _o: PhantomData,
-        _e: PhantomData,
+pub struct NextFn<R, O, E> {
+    inner: Box<dyn Next<R, Output = O, Error = E> + Send + Sync>,
+}
+
+impl<R, O, E> Next<R> for NextFn<R, O, E> {
+    type Output = O;
+    type Error = E;
+    fn run(
+        &self,
+        req: R,
+    ) -> Pin<Box<dyn Future<Output = Result<Self::Output, Rejection<R, Self::Error>>> + Send>> {
+        self.inner.run(req)
     }
 }

@@ -5,7 +5,7 @@ use modifier::Set;
 #[cfg(feature = "json")]
 use serde::Serialize;
 
-use tasks_core::{Either, One};
+use tasks::{Either, One};
 
 pub trait Reply {
     fn into_response(self) -> Response;
@@ -116,7 +116,7 @@ pub struct Json<S: Serialize> {
 
 #[cfg(feature = "json")]
 impl<S: Serialize> Json<S> {
-    fn pretty(self) -> Json<S> {
+    pub fn pretty(self) -> Json<S> {
         Json {
             value: self.value,
             pretty: self.pretty,

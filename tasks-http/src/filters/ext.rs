@@ -1,6 +1,6 @@
 use crate::{Error, Request};
 use futures::future;
-use tasks_core::{filter_fn_one, Task};
+use tasks::{filter_fn_one, Task};
 
 pub fn get_ext<S: Clone + Send + Sync + 'static>(
 ) -> impl Task<Request, Output = (Request, (Option<S>,)), Error = Error> + Copy {

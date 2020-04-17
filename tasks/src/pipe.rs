@@ -1,74 +1,111 @@
-use super::task::{Task};
-use std::sync::Arc;
+use super::{Rejection, Task};
+use futures_core::{ready, TryFuture};
+use pin_project::{pin_project, project};
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use super::utils::Promise;
 
-
-pub struct Pipe<S1, S2> {
-    pub(crate) s1: S1,
-    pub(crate) s2: Arc<S2>,
+#[derive(Clone)]
+pub struct Pipe<T1, T2> {
+    t1: T1,
+    t2: T2,
 }
 
-impl<S1, S2, I> Task<I> for Pipe<S1, S2>
+impl<T1, T2> Pipe<T1, T2> {
+    pub fn new(t1: T1, t2: T2) -> Pipe<T1, T2> {
+        Pipe { t1, t2 }
+    }
+}
+
+impl<T1, T2, R> Task<R> for Pipe<T1, T2>
 where
-    S1: Task<I>,
-    S2: Task<<S1 as Task<I>>::Output, Error = <S1 as Task<I>>::Error>
-        + 'static
-        + Send
-        + Sync,
-    <S1 as Task<I>>::Output: 'static,
-    <S1 as Task<I>>::Error: Send + 'static,
-    <S2 as Task<<S1 as Task<I>>::Output>>::Future: Send + 'static,
+    T1: Task<R>,
+    T2: Send + Clone + Task<<T1 as Task<R>>::Output, Error = <T1 as Task<R>>::Error>,
 {
-    //type Input = S1::Input;
-    type Error = S1::Error;
-    type Output = S2::Output;
-    type Future = PipeFuture<<S1 as Task<I>>::Future, S2, S1::Output, Self::Error>;
-    
-    fn exec(&self, input: I) -> Self::Future {
-        PipeFuture::new(self.s1.exec(input), &self.s2)
-    }
+    type Output = T2::Output;
+    type Error = T2::Error;
+    type Future = PipeFuture<T1, T2, R>;
 
-    fn can_exec(&self, input: &I) -> bool {
-        self.s1.can_exec(input)
-    }
-
-}
-
-pub struct PipeFuture<F: Future<Output = Result<V, E>>, T: Task<V, Error = E>, V, E> {
-    current: Promise<F, <T as Task<V>>::Future>,
-    task: Arc<T>,
-}
-
-impl<F: Future<Output = Result<V, E>>, T: Task<V, Error = E>, V, E> PipeFuture<F, T, V, E> {
-    pub fn new(current: F, next: &Arc<T>) -> PipeFuture<F, T, V, E> {
-        PipeFuture { current: Promise::First(current), task: next.clone() }
+    fn run(&self, req: R) -> Self::Future {
+        PipeFuture::new(self.t1.run(req), self.t2.clone())
     }
 }
 
-impl<F: Future<Output = Result<V, E>>, T: Task<V, Error = E>, V, E> Future for PipeFuture<F, T, V, E> {
-    type Output = Result<<T as Task<V>>::Output, <T as Task<V>>::Error>;
+#[pin_project]
+enum PipeFutureState<T1, T2, R>
+where
+    T1: Task<R>,
+    T2: Clone + Task<<T1 as Task<R>>::Output, Error = <T1 as Task<R>>::Error>,
+{
+    First(#[pin] T1::Future, T2),
+    Second(#[pin] T2::Future),
+    Done,
+}
 
-    fn poll(self: Pin<&mut Self>, waker: &mut Context) -> Poll<Self::Output> {
-        let this = unsafe { Pin::get_unchecked_mut(self) };
+#[pin_project]
+pub struct PipeFuture<T1, T2, R>
+where
+    T1: Task<R>,
+    T2: Clone + Task<<T1 as Task<R>>::Output, Error = <T1 as Task<R>>::Error>,
+{
+    #[pin]
+    state: PipeFutureState<T1, T2, R>,
+}
 
-        match &mut this.current {
-            Promise::First(fut) => {
-                //
-                match unsafe { Pin::new_unchecked(fut) }.poll(waker) {
-                    Poll::Pending => Poll::Pending,
-                    Poll::Ready(Ok(next)) => {
-                        let mut fut = this.task.exec(next);
-                        let poll = unsafe { Pin::new_unchecked(&mut fut)}.poll(waker);
-                        this.current = Promise::Second(fut);
-                        poll
-                    },
-                    Poll::Ready(Err(err)) => Poll::Ready(Err(err))
-                }
-            },
-            Promise::Second(fut) => unsafe { Pin::new_unchecked(fut) }.poll(waker),
+impl<T1, T2, R> PipeFuture<T1, T2, R>
+where
+    T1: Task<R>,
+    T2: Clone + Task<<T1 as Task<R>>::Output, Error = <T1 as Task<R>>::Error>,
+{
+    pub fn new(t1: T1::Future, t2: T2) -> PipeFuture<T1, T2, R> {
+        PipeFuture {
+            state: PipeFutureState::First(t1, t2),
         }
     }
 }
+
+impl<T1, T2, R> Future for PipeFuture<T1, T2, R>
+where
+    T1: Task<R>,
+    T2: Clone + Task<<T1 as Task<R>>::Output, Error = <T1 as Task<R>>::Error>,
+{
+    type Output = Result<T2::Output, Rejection<R, T2::Error>>;
+    #[project]
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        loop {
+            let pin = self.as_mut().project();
+            #[project]
+            let fut2 = match pin.state.project() {
+                PipeFutureState::First(first, second) => match ready!(first.try_poll(cx)) {
+                    Ok(ret) => second.run(ret),
+                    Err(Rejection::Err(err)) => return Poll::Ready(Err(Rejection::Err(err))),
+                    Err(Rejection::Reject(ret)) => return Poll::Ready(Err(Rejection::Reject(ret))),
+                },
+                PipeFutureState::Second(fut) => match ready!(fut.try_poll(cx)) {
+                    Ok(some) => {
+                        self.set(PipeFuture {
+                            state: PipeFutureState::Done,
+                        });
+                        return Poll::Ready(Ok(some));
+                    }
+                    Err(Rejection::Err(err)) => return Poll::Ready(Err(Rejection::Err(err))),
+                    Err(Rejection::Reject(_)) => {
+                        panic!("should propragate cause");
+                        //return Poll::Ready(Err(Rejection::Err(PipeError::Reject)))
+                    }
+                },
+                PipeFutureState::Done => panic!("poll after done"),
+            };
+
+            self.set(PipeFuture {
+                state: PipeFutureState::Second(fut2),
+            });
+        }
+    }
+}
+
+// #[derive(Debug, PartialEq)]
+// pub enum PipeError<E> {
+//     Err(E),
+//     Reject,
+// }

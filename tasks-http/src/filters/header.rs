@@ -1,7 +1,7 @@
-use crate::{Error, KnownError, Request, Response};
+use crate::{Error, KnownError, Request};
 use futures::future;
 use headers::{Header, HeaderMapExt};
-use tasks_core::{filter_fn_one, task, Task};
+use tasks::{filter_fn_one, Task};
 
 pub fn header<H: Header + Send + 'static>(
 ) -> impl Task<Request, Output = (Request, (H,)), Error = Error> + Copy {

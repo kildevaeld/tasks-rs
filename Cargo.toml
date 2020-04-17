@@ -2,7 +2,7 @@
 
 members = [
     "tasks",
-    "tasks-core",
+    # "tasks-core",
     "tasks-http",
     "tasks-vinyl"
 ]

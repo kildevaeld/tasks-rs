@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use tasks_core::*;
+use tasks::*;
 use tasks_http::prelude::*;
 use tokio;
 

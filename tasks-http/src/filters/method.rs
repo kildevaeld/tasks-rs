@@ -1,7 +1,7 @@
 use crate::{Error, Request};
 use futures::future;
 use hyper::Method;
-use tasks_core::{filter_fn_one, task, Rejection, Task};
+use tasks::{filter_fn_one, task, Rejection, Task};
 
 pub fn get() -> impl Task<Request, Output = (Request, ()), Error = Error> + Copy {
     method_is(|| &Method::GET)
