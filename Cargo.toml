@@ -3,6 +3,6 @@
 members = [
     "tasks",
     # "tasks-core",
-    "tasks-http",
-    "tasks-vinyl"
+    #"tasks-http",
+    #"tasks-vinyl"
 ]

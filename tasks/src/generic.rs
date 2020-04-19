@@ -8,7 +8,7 @@ pub fn one<T>(val: T) -> One<T> {
     (val,)
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Either<T, U> {
     A(T),
     B(U),
