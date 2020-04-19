@@ -1,5 +1,5 @@
 // use super::filter::filter_fn_one;
-use super::{And, AndThen, Combine, Extract, Func, Map, Or, Pipe, Task, Tuple, Unroll};
+use super::{And, AndThen, Combine, Extract, Func, Map, Or, Pipe, Reject, Task, Tuple, Unroll};
 use futures_core::TryFuture;
 
 pub trait TaskExt<R>: Task<R> + Sized {
@@ -11,6 +11,10 @@ pub trait TaskExt<R>: Task<R> + Sized {
         Pipe::new(self, task)
     }
 
+    fn reject(self) -> Reject<Self> {
+        Reject::new(self)
+    }
+
     // Filters
     fn and<F>(self, other: F) -> And<Self, F>
     where
@@ -20,7 +24,6 @@ pub trait TaskExt<R>: Task<R> + Sized {
             Combine<<<F::Output as Extract<R>>::Extract as Tuple>::HList>,
         F: Task<R> + Clone,
         F::Output: Extract<R>,
-        //F::Error: CombineRejection<Self::Error>,
     {
         And {
             first: self,
@@ -54,7 +57,7 @@ pub trait TaskExt<R>: Task<R> + Sized {
         Self::Output: Extract<R>,
         F: Func<<Self::Output as Extract<R>>::Extract> + Clone,
         F::Output: TryFuture + Send,
-        <F::Output as TryFuture>::Error: Into<Self::Error>, //CombineRejection<Self::Error>,
+        <F::Output as TryFuture>::Error: Into<Self::Error>,
     {
         AndThen {
             filter: self,
@@ -89,7 +92,7 @@ mod test {
         let t: TaskFn<_, _, i32, ()> = task!(|req: i32| async move { reject!(req) });
 
         let ret = futures::executor::block_on(t.run(1));
-        assert_eq!(ret, Err(Rejection::Reject(1)));
+        assert_eq!(ret, Err(Rejection::Reject(1, None)));
     }
 
     #[test]

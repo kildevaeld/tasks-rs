@@ -79,7 +79,9 @@ where
                 PipeFutureState::First(first, second) => match ready!(first.try_poll(cx)) {
                     Ok(ret) => second.run(ret),
                     Err(Rejection::Err(err)) => return Poll::Ready(Err(Rejection::Err(err))),
-                    Err(Rejection::Reject(ret)) => return Poll::Ready(Err(Rejection::Reject(ret))),
+                    Err(Rejection::Reject(ret, e)) => {
+                        return Poll::Ready(Err(Rejection::Reject(ret, e)))
+                    }
                 },
                 PipeFutureState::Second(fut) => match ready!(fut.try_poll(cx)) {
                     Ok(some) => {
@@ -89,7 +91,7 @@ where
                         return Poll::Ready(Ok(some));
                     }
                     Err(Rejection::Err(err)) => return Poll::Ready(Err(Rejection::Err(err))),
-                    Err(Rejection::Reject(_)) => {
+                    Err(Rejection::Reject(_, _)) => {
                         panic!("should propragate cause");
                         //return Poll::Ready(Err(Rejection::Err(PipeError::Reject)))
                     }

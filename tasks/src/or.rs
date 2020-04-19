@@ -75,7 +75,7 @@ where
                         return Poll::Ready(Ok(Either::A(ret)));
                     }
                     Err(Rejection::Err(err)) => return Poll::Ready(Err(Rejection::Err(err))),
-                    Err(Rejection::Reject(req)) => second.run(req),
+                    Err(Rejection::Reject(req, _)) => second.run(req),
                 },
                 OrFutureState::Second(fut) => match ready!(fut.try_poll(cx)) {
                     Ok(some) => {
