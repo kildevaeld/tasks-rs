@@ -105,18 +105,6 @@ where
     }
 }
 
-// impl<F, R> Func<crate::Rejection> for F
-// where
-//     F: Fn(crate::Rejection) -> R,
-// {
-//     type Output = R;
-
-//     #[inline]
-//     fn call(&self, arg: crate::Rejection) -> Self::Output {
-//         (*self)(arg)
-//     }
-// }
-
 macro_rules! product {
     ($H:expr) => { Product($H, ()) };
     ($H:expr, $($T:expr),*) => { Product($H, product!($($T),*)) };

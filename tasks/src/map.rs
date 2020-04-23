@@ -33,21 +33,6 @@ where
     }
 }
 
-// impl<T, F, R> Task<R> for Map<T, F>
-// where
-//     T: Filter<R>,
-//     F: Func<T::Extract> + Clone + Send,
-// {
-//     type Output = F::Output;
-//     type Error = T::Error;
-//     type Future = MapTaskFuture<<Self as Filter<R>>::Future>;
-//     fn run(&self, req: R) -> Self::Future {
-//         MapTaskFuture {
-//             future: self.filter(req),
-//         }
-//     }
-// }
-
 #[pin_project]
 pub struct MapTaskFuture<F> {
     #[pin]

@@ -9,7 +9,6 @@ use std::task::{Context, Poll};
 #[derive(Copy, Clone)]
 #[allow(missing_debug_implementations)]
 pub struct FilterFn<F> {
-    // TODO: could include a `debug_str: &'static str` to be used in Debug impl
     func: F,
 }
 
@@ -19,11 +18,9 @@ where
     U: TryFuture + Send,
     U::Ok: Tuple + Send,
     R: Sync + Send + 'static,
-    //U::Error: IsReject,
 {
     type Output = (R, U::Ok);
     type Error = U::Error;
-    // type Future = IntoFuture<U>;
     type Future =
         Pin<Box<dyn Future<Output = Result<Self::Output, Rejection<R, Self::Error>>> + Send>>;
 
@@ -39,7 +36,6 @@ where
         };
 
         Box::pin(future)
-        //(self.func)(req).into_future()
     }
 }
 
@@ -59,7 +55,6 @@ pub fn filter_fn_one<F, R, U>(
 where
     F: Fn(&mut R) -> U + Copy,
     U: TryFuture,
-    //U::Error: IsReject,
 {
     filter_fn(move |req| func(req).map_ok(tup_one as _))
 }
@@ -67,28 +62,6 @@ where
 fn tup_one<T>(item: T) -> (T,) {
     (item,)
 }
-
-// use crate::{Rejection, Task};
-// use futures_core::ready;
-
-// pub struct FilteredTask<F> {
-//     filter: F,
-// }
-
-// impl<F, R> Task<R> for FilteredTask<F>
-// where
-//     F: Send + Sync + Filter<R> + Clone,
-//     R: Sync + Send + 'static,
-// {
-//     type Output = F::Extract;
-//     type Error = F::Error;
-//     type Future = FilteredTaskFuture<F::Future>;
-//     fn run(&self, req: R) -> Self::Future {
-//         FilteredTaskFuture {
-//             state: self.filter.filter(req),
-//         }
-//     }
-// }
 
 #[pin_project]
 pub struct FilteredTaskFuture<F> {

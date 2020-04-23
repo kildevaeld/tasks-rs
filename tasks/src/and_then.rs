@@ -5,7 +5,6 @@ use std::task::{Context, Poll};
 use crate::{Extract, Func, Rejection, Task};
 use futures_core::{ready, TryFuture};
 use pin_project::{pin_project, project};
-// use crate::reject::CombineRejection;
 
 #[derive(Clone, Copy, Debug)]
 pub struct AndThen<T, F> {
@@ -20,10 +19,10 @@ where
     F: Func<<T::Output as Extract<R>>::Extract> + Clone + Send,
     F::Output: TryFuture + Send,
     <F::Output as TryFuture>::Error: Into<T::Error>,
-    R: Send, //<F::Output as TryFuture>::Error: CombineRejection<T::Error>,
+    R: Send,
 {
     type Output = (R, (<F::Output as TryFuture>::Ok,));
-    type Error = T::Error; //<T::Output as TryFuture>::Error; //<<F::Output as TryFuture>::Error as CombineRejection<T::Error>>::One;
+    type Error = T::Error;
     type Future = AndThenFuture<T, F, R>;
     #[inline]
     fn run(&self, req: R) -> Self::Future {
@@ -55,8 +54,6 @@ where
     T::Output: Extract<R>,
     F: Func<<T::Output as Extract<R>>::Extract>,
     F::Output: TryFuture + Send,
-    //<F::Output as TryFuture>::Error: Into<T::Error>,
-    //<F::Output as TryFuture>::Error: CombineRejection<T::Error>,
 {
     First(#[pin] T::Future, F),
     Second(#[pin] F::Output, Option<R>),
@@ -69,13 +66,9 @@ where
     T::Output: Extract<R>,
     F: Func<<T::Output as Extract<R>>::Extract>,
     F::Output: TryFuture + Send,
-    <F::Output as TryFuture>::Error: Into<T::Error>, // <F::Output as TryFuture>::Error: CombineRejection<T::Error>,
+    <F::Output as TryFuture>::Error: Into<T::Error>,
 {
-    type Output = Result<
-        (R, (<F::Output as TryFuture>::Ok,)),
-        Rejection<R, T::Error>,
-        // <<F::Output as TryFuture>::Error as CombineRejection<T::Error>>::One,
-    >;
+    type Output = Result<(R, (<F::Output as TryFuture>::Ok,)), Rejection<R, T::Error>>;
 
     #[project]
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {

@@ -1,10 +1,9 @@
 #[macro_use]
 mod macros;
-mod end;
-mod stack;
-// pub mod filter;
+
 mod and;
 mod and_then;
+mod end;
 mod filter;
 mod generic;
 mod map;
@@ -13,6 +12,7 @@ mod middleware_ext;
 mod or;
 mod pass;
 mod pipe;
+mod stack;
 mod task;
 mod task_ext;
 mod unroll;

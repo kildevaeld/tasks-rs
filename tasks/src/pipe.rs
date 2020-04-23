@@ -93,7 +93,6 @@ where
                     Err(Rejection::Err(err)) => return Poll::Ready(Err(Rejection::Err(err))),
                     Err(Rejection::Reject(_, _)) => {
                         panic!("should propragate cause");
-                        //return Poll::Ready(Err(Rejection::Err(PipeError::Reject)))
                     }
                 },
                 PipeFutureState::Done => panic!("poll after done"),
@@ -105,9 +104,3 @@ where
         }
     }
 }
-
-// #[derive(Debug, PartialEq)]
-// pub enum PipeError<E> {
-//     Err(E),
-//     Reject,
-// }

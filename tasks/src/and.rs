@@ -1,13 +1,10 @@
+use super::Extract;
+use crate::{Combine, HList, Rejection, Task, Tuple};
+use futures_core::ready;
+use pin_project::{pin_project, project};
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-
-use futures_core::ready;
-use pin_project::{pin_project, project};
-
-use crate::{Combine, HList, Rejection, Task, Tuple};
-// use crate::reject::CombineRejection;
-use super::Extract;
 
 #[derive(Clone, Copy, Debug)]
 pub struct And<T, U> {
@@ -27,7 +24,6 @@ where
     <<<<T::Output as Extract<R>>::Extract as Tuple>::HList as Combine<
         <<U::Output as Extract<R>>::Extract as Tuple>::HList,
     >>::Output as HList>::Tuple: Send,
-    //U::Error: CombineRejection<T::Error>,
 {
     type Output = (
         R,
@@ -35,7 +31,7 @@ where
             <<U::Output as Extract<R>>::Extract as Tuple>::HList,
         >>::Output as HList>::Tuple,
     );
-    type Error = U::Error; //<U::Error as CombineRejection<T::Error>>::One;
+    type Error = U::Error;
     type Future = AndFuture<R, T, U>;
 
     fn run(&self, req: R) -> Self::Future {
@@ -75,7 +71,6 @@ where
     U::Output: Extract<R>,
     <<T::Output as Extract<R>>::Extract as Tuple>::HList:
         Combine<<<U::Output as Extract<R>>::Extract as Tuple>::HList> + Send,
-    //U::Error: CombineRejection<T::Error>,
 {
     type Output = Result<
         (
@@ -86,7 +81,6 @@ where
         ),
         Rejection<R, U::Error>,
     >;
-    // <U::Error as CombineRejection<T::Error>>::One>;
 
     #[project]
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
