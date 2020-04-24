@@ -16,11 +16,12 @@ mod pipe;
 mod stack;
 mod task;
 mod task_ext;
+mod task_state;
 mod unroll;
 pub mod util;
 
 pub use self::{
     and::*, and_then::*, end::*, filter::*, filter_pipe::*, generic::*, map::*, middleware::*,
     middleware_ext::*, or::*, pass::*, pipe::*, stack::*, stack::*, task::*, task_ext::*,
-    unroll::*,
+    task_state::*, unroll::*,
 };

@@ -6,6 +6,13 @@ macro_rules! task {
 }
 
 #[macro_export]
+macro_rules! task_state {
+    ($state: expr, task: expr) => {
+        $crate::TaskStateFn::new($state, $task)
+    };
+}
+
+#[macro_export]
 macro_rules! reject {
     ($req: expr) => {
         return Err($crate::Rejection::Reject($req, None));
