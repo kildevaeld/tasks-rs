@@ -5,6 +5,7 @@ mod and;
 mod and_then;
 mod end;
 mod filter;
+mod filter_pipe;
 mod generic;
 mod map;
 mod middleware;
@@ -19,6 +20,7 @@ mod unroll;
 pub mod util;
 
 pub use self::{
-    and::*, and_then::*, end::*, filter::*, generic::*, map::*, middleware::*, middleware_ext::*,
-    or::*, pass::*, pipe::*, stack::*, stack::*, task::*, task_ext::*, unroll::*,
+    and::*, and_then::*, end::*, filter::*, filter_pipe::*, generic::*, map::*, middleware::*,
+    middleware_ext::*, or::*, pass::*, pipe::*, stack::*, stack::*, task::*, task_ext::*,
+    unroll::*,
 };

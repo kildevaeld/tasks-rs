@@ -1,4 +1,6 @@
-use super::{And, AndThen, Combine, Extract, Func, Map, Or, Pipe, Reject, Task, Tuple, Unroll};
+use super::{
+    And, AndThen, Combine, Extract, FilterPipe, Func, Map, Or, Pipe, Reject, Task, Tuple, Unroll,
+};
 use futures_core::TryFuture;
 
 pub trait TaskExt<R>: Task<R> + Sized {
@@ -62,6 +64,15 @@ pub trait TaskExt<R>: Task<R> + Sized {
             filter: self,
             callback: fun,
         }
+    }
+
+    fn filter_pipe<F>(self, other: F) -> FilterPipe<Self, F>
+    where
+        Self: Sized,
+        Self::Output: Extract<R>,
+        F: Task<Self::Output>,
+    {
+        FilterPipe::new(self, other)
     }
 }
 
