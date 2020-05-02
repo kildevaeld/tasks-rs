@@ -89,6 +89,9 @@ where
                         Err(err) => Err(Rejection::Err(err.into())),
                     };
                     self.set(AndThenFuture { state: State::Done });
+
+                    //let (req, (ret,)) = ex3;
+
                     return Poll::Ready(ex3);
                 }
                 State::Done => panic!("polled after complete"),

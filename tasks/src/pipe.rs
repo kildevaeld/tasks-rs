@@ -91,8 +91,11 @@ where
                         return Poll::Ready(Ok(some));
                     }
                     Err(Rejection::Err(err)) => return Poll::Ready(Err(Rejection::Err(err))),
-                    Err(Rejection::Reject(_, _)) => {
-                        panic!("should propragate cause");
+                    Err(Rejection::Reject(_, Some(err))) => {
+                        return Poll::Ready(Err(Rejection::Err(err)));
+                    }
+                    Err(Rejection::Reject(_, None)) => {
+                        panic!("rejected");
                     }
                 },
                 PipeFutureState::Done => panic!("poll after done"),

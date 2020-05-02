@@ -183,4 +183,30 @@ mod test {
         let ret = ret.unwrap();
         assert_eq!(String::from("name: Rasmus, age: 36"), ret);
     }
+
+    // #[test]
+    // fn test_map2() {
+    //     let m = task!(|req: Person| async move {
+    //         let name = req.name.clone();
+    //         let age = req.age;
+    //         Result::<_, Rejection<_, ()>>::Ok((req, (name, age)))
+    //     })
+    //     // .and(task!(|req: Person| async move {
+    //     //     let age = req.age;
+    //     //     Ok((req, (age,)))
+    //     // }))
+    //     .and_then(|name, age| async move { Result::<_, ()>::Ok((name, age)) })
+    //     .unroll();
+    //     //.//untuple_one();
+    //     //.then(task!(|ret: (String, u8)| { futures::future::ok(ret) }));
+
+    //     let ret = futures::executor::block_on(m.run(Person {
+    //         name: "Rasmus".to_owned(),
+    //         age: 36,
+    //     }));
+
+    //     assert!(ret.is_ok());
+    //     let ret = ret.unwrap();
+    //     assert_eq!((String::from("Rasmus"), 36), ret);
+    // }
 }
