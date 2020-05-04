@@ -14,8 +14,8 @@ impl<M1, M2> Stack<M1, M2> {
 
 impl<M1, M2, R, T> Middleware<R, T> for Stack<M1, M2>
 where
-    M1: Send + Middleware<R, M2::Task>,
-    M2: 'static + Clone + Send + Sync + Middleware<R, T>,
+    M1: Middleware<R, M2::Task>,
+    M2: 'static + Middleware<R, T>,
     T: Task<R>,
     R: 'static,
 {
