@@ -150,6 +150,26 @@ where
     _r: std::marker::PhantomData<R>,
 }
 
+impl<A, B, R> EitherFuture<A, B, R>
+where
+    A: Task<R>,
+    B: Task<R, Error = <A as Task<R>>::Error>,
+{
+    pub fn a(fut: A::Future) -> EitherFuture<A, B, R> {
+        EitherFuture {
+            fut: EitherPromise::First(fut),
+            _r: std::marker::PhantomData,
+        }
+    }
+
+    pub fn b(fut: B::Future) -> EitherFuture<A, B, R> {
+        EitherFuture {
+            fut: EitherPromise::Second(fut),
+            _r: std::marker::PhantomData,
+        }
+    }
+}
+
 impl<A, B, R> Future for EitherFuture<A, B, R>
 where
     A: Task<R>,
