@@ -1,7 +1,9 @@
 use super::{
-    And, AndThen, Combine, Extract, FilterPipe, Func, Map, Or, Pipe, Reject, Task, Tuple, Unroll,
+    And, AndThen, Combine, Extract, FilterPipe, Func, Map, Middleware, Or, Pipe, Reject, Task,
+    Tuple, Unroll,
 };
 use futures_core::TryFuture;
+use std::future::Future;
 
 pub trait TaskExt<R>: Task<R> + Sized {
     fn or<T: Task<R, Error = Self::Error>>(self, task: T) -> Or<Self, T> {
@@ -74,6 +76,22 @@ pub trait TaskExt<R>: Task<R> + Sized {
     {
         FilterPipe::new(self, other)
     }
+
+    fn with<M>(self, middleware: M) -> M::Task
+    where
+        Self: Sized,
+        M: Middleware<R, Self>,
+    {
+        middleware.wrap(self)
+    }
+
+    // fn and_with<F, U>(self, middleware: F)
+    // where
+    //     Self: Sized,
+    //     F: Fn(R, Self) -> U,
+    //     U: Future,
+    // {
+    // }
 }
 
 impl<R, T> TaskExt<R> for T where T: Task<R> {}
@@ -208,5 +226,13 @@ mod test {
     //     assert!(ret.is_ok());
     //     let ret = ret.unwrap();
     //     assert_eq!((String::from("Rasmus"), 36), ret);
+    // }
+
+    // #[test]
+    // fn middleware() {
+    //     let t = task!(|i: i32| async move { Result::<_, Rejection<_, ()>>::Ok(i + 2) })
+    //         .and_with(|req, task| async move { task.run(req) });
+
+    //     t.run(100);
     // }
 }

@@ -37,6 +37,13 @@ macro_rules! middleware {
 }
 
 #[macro_export]
+macro_rules! middleware2 {
+    ($m: expr) => {
+        $crate::Middleware2Fn::new($m)
+    };
+}
+
+#[macro_export]
 macro_rules! and {
     [ $y: expr, $( $x:expr ),* ] => {
         {

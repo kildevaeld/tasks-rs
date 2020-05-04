@@ -3,7 +3,7 @@ mod macros;
 
 mod and;
 mod and_then;
-mod end;
+// mod end;
 mod filter;
 mod filter_pipe;
 mod generic;
@@ -21,7 +21,7 @@ mod unroll;
 pub mod util;
 
 pub use self::{
-    and::*, and_then::*, end::*, filter::*, filter_pipe::*, generic::*, map::*, middleware::*,
+    and::*, and_then::*, filter::*, filter_pipe::*, generic::*, map::*, middleware::*,
     middleware_ext::*, or::*, pass::*, pipe::*, stack::*, stack::*, task::*, task_ext::*,
     task_state::*, unroll::*,
 };
