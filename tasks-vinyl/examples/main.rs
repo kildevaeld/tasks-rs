@@ -1,27 +1,23 @@
-use tasks::*;
-use tasks_vinyl::*;
 use futures_util::io::AsyncReadExt;
 use futures_util::pin_mut;
+use futures_util::stream::{StreamExt, TryStreamExt};
+use tasks::task;
+use tasks::*;
+use tasks_vinyl::*;
+use vfs_async::{PhysicalFS, VFS};
 
-#[async_std::main]
-async fn main() -> Result<(), Error> {
-    let dir = DirectoryProducer::new("./").await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let vfs = PhysicalFS::new("./")?;
+    println!("{:?}", vfs.path("."));
+    let out = src(vfs, "**/*.rs")
+        .await?
+        .pipe(task!(|file| async move { Ok(file) }))
+        .buffered(10)
+        .collect::<Vec<_>>()
+        .await;
 
-    dir.into_vinyl().with_task(task_fn!(|mut item: File| {
-        async move {
-            //let mut output = Vec::default();
-            let out = match item.content {
-                Content::Bytes(bytes) => {
-                    bytes
-                },
-                _ => {
-                    return Ok(())
-                }
-            };
-            println!("PATH {:?} {:?}", item.path, out.len());
-            Ok(())
-        }
-    })).consume(5).await?;
+    println!("OUT {:?}", out);
 
     Ok(())
 }

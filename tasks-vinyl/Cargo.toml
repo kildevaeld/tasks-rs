@@ -11,14 +11,17 @@ futures-core = "0.3"
 futures-util = { version = "0.3", features = [ "io" ] }
 futures-io = "0.3"
 bytes = "0.5"
-tasks = { path = "../tasks" }
-async-std = { version = "1.4", optional = true, features = [ "attributes" ] }
+tasks = {  path = "../tasks" }
 failure = "0.1"
 pin-project = "0.4"
+vfs-async = { git = "https://github.com/kildevaeld/vfs-rs" }
 
+
+[dev-dependencies]
+tokio = { version = "0.2", features = [ "macros" ]}
 
 [features]
-default = [ "async-std" ]
+default = [ ]
 
 
 [[example]]
