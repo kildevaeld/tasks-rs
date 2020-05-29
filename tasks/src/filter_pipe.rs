@@ -6,7 +6,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct FilterPipe<T1, T2> {
     t1: T1,
     t2: T2,
