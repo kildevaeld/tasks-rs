@@ -8,6 +8,7 @@ use std::future::Future;
 use std::io::Read;
 use std::path::PathBuf;
 use std::pin::Pin;
+use tokio::sync::Mutex;
 
 pub enum Content {
     Stream(Pin<Box<dyn Stream<Item = Result<Bytes, Error>> + Send>>),

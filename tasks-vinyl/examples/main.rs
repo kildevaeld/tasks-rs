@@ -9,10 +9,12 @@ use vfs_async::{PhysicalFS, VFS};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let vfs = PhysicalFS::new("./")?;
-    println!("{:?}", vfs.path("."));
+    let out = PhysicalFS::new("./output")?;
     let out = src(vfs, "**/*.rs")
         .await?
         .pipe(task!(|file| async move { Ok(file) }))
+        .pipe(task!(|file| async move { Ok(file) }))
+        .pipe(dest(out))
         .buffered(10)
         .collect::<Vec<_>>()
         .await;

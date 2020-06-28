@@ -15,6 +15,7 @@ tasks = {  path = "../tasks" }
 failure = "0.1"
 pin-project = "0.4"
 vfs-async = { git = "https://github.com/kildevaeld/vfs-rs" }
+tokio = { version = "0.2", features = [ "sync" ]}
 
 
 [dev-dependencies]
