@@ -1,7 +1,7 @@
 use super::util;
 use super::{Content, Error, File};
 use futures_core::{future::BoxFuture, ready, Stream};
-use futures_util::{stream::Buffered, StreamExt, TryStreamExt};
+use futures_util::{io::AsyncReadExt, stream::Buffered, StreamExt, TryStreamExt};
 use pin_project::{pin_project, project};
 use std::future::Future;
 use std::pin::Pin;
