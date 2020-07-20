@@ -6,7 +6,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct And<T, U> {
     pub(super) first: T,
     pub(super) second: U,
@@ -39,6 +39,13 @@ where
             state: State::First(self.first.run(req), self.second.clone()),
         }
     }
+}
+
+impl<T, U> Copy for And<T, U>
+where
+    T: Copy,
+    U: Copy,
+{
 }
 
 #[allow(missing_debug_implementations)]
