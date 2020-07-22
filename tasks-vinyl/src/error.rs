@@ -1,11 +1,19 @@
-use failure::Fail;
+use std::error::Error as StdError;
+use std::fmt;
 use std::io;
 
-#[derive(Fail, Debug)]
+#[derive(Debug)]
 pub enum Error {
-    #[fail(display = "Io error: {}", _0)]
-    IoError(io::Error)
+    IoError(io::Error),
 }
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Ok(())
+    }
+}
+
+impl StdError for Error {}
 
 impl From<io::Error> for Error {
     fn from(error: io::Error) -> Self {

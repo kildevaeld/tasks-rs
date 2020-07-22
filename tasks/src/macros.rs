@@ -1,33 +1,56 @@
-
-
-
 #[macro_export]
-macro_rules! task_fn {
-    ($handler: expr) => {
-        $crate::TaskFn::new($handler, |_| true)
-    };
-    ($handler: expr, $check: expr) => {
-        $crate::TaskFn::new($handler, $check)
+macro_rules! task {
+    ($task: expr) => {
+        $crate::TaskFn::new($task)
     };
 }
 
-
 #[macro_export]
-macro_rules! middleware_fn {
-    ($handler: expr) => {
-        $crate::MiddlewareFn::new($handler)
+macro_rules! task_state {
+    ($state: expr, task: expr) => {
+        $crate::TaskStateFn::new($state, $task)
     };
 }
 
+#[macro_export]
+macro_rules! reject {
+    ($req: expr) => {
+        return Err($crate::Rejection::Reject($req, None));
+    };
+    ($req: expr, $err: expr) => {
+        return Err($crate::Rejection::Reject($req, Some($err)));
+    };
+}
 
 #[macro_export]
-macro_rules! pipe {
+macro_rules! fail {
+    ($err: expr) => {
+        return Err($crate::Rejection::Err($err));
+    };
+}
+
+#[macro_export]
+macro_rules! middleware {
+    ($m: expr) => {
+        $crate::MiddlewareFn::new($m)
+    };
+}
+
+#[macro_export]
+macro_rules! middleware2 {
+    ($m: expr) => {
+        $crate::Middleware2Fn::new($m)
+    };
+}
+
+#[macro_export]
+macro_rules! and {
     [ $y: expr, $( $x:expr ),* ] => {
         {
-            use $crate::TaskExt;
+            use $crate::MiddlewareExt;
             let m = $y;
             $(
-                let m = m.pipe($x);
+                let m = m.and($x);
             )*
             m
         }
@@ -41,7 +64,7 @@ macro_rules! pipe {
 }
 
 #[macro_export]
-macro_rules! either {
+macro_rules! or {
     [ $y: expr, $( $x:expr ),* ] => {
         {
             use $crate::TaskExt;
@@ -58,87 +81,4 @@ macro_rules! either {
             $y
         }
      };
-}
-
-
-#[macro_export]
-macro_rules! stack {
-    [ $y: expr, $( $x:expr ),* ] => {
-        {
-            use $crate::MiddlewareExt;
-            let m = $y;
-            $(
-                let m = m.stack($x);
-            )*
-            m
-        }
-     };
-
-     [ $y: expr] => {
-        {
-            $y
-        }
-     };
-}
-
-#[cfg(feature = "sync")]
-#[macro_export]
-macro_rules! pool {
-    ($size: expr, $func: expr) => {
-        $crate::sync::Pool::new($size, $func)
-    };
-}
-
-#[cfg(feature = "sync")]
-#[macro_export]
-macro_rules! sync_task_fn {
-    ($handler: expr) => {
-        $crate::sync::SyncTaskFn::new($handler, |_| true)
-    };
-    ($handler: expr, $check: expr) => {
-        $crate::sync::SyncTaskFn::with_check($handler, $check)
-    };
-}
-
-
-#[cfg(test)]
-mod tests {
-
-    // use super::super::station_fn;
-    // use super::super::Station;
-    use super::super::*;
-    use futures_util::future;
-    #[test]
-    fn test_pipe() {
-        let chain = pipe![
-            task_fn!(|s: &str| future::ok(s) ),
-            task_fn!(|s: &str| future::ok(s)),
-            pipe![task_fn!(|s: &str| future::ok(s))],
-            pipe![task_fn!(|s: &str| future::ok::<_, TaskError>(s))]
-        ];
-
-        let result = futures_executor::block_on(chain.exec("Hello, World!")).unwrap();
-        assert_eq!(result, "Hello, World!");
-    }
-
-    #[test]
-    fn test_conveyor_meaning_of_life() {
-        let chain = pipe![
-            task_fn!(|input: &str| future::ok(input.len())),
-            task_fn!(|len: usize| future::ok::<_, TaskError>(len * 7))
-        ];
-
-        let ans = futures_executor::block_on(chain.exec("Hello!"));
-
-        assert_eq!(ans.unwrap(), 42);
-    }
-
-    #[cfg(feature = "sync")]
-    #[test]
-    fn test_pool() {
-        let pool = pool!(2, sync_task_fn!(|test| Result::<_, TaskError>::Ok(test + 2))).unwrap();
-
-        let ans = futures_executor::block_on(pool.exec(2));
-    }
-
 }

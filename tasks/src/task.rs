@@ -1,106 +1,195 @@
-use futures_util::future::Ready;
+use super::generic::Either;
+use futures_core::ready;
+use pin_project::{pin_project, project};
 use std::future::Future;
 use std::marker::PhantomData;
+use std::pin::Pin;
+use std::task::{Context, Poll};
 
-pub trait Task<Input> {
+#[derive(Debug, PartialEq)]
+pub enum Rejection<R, E> {
+    Err(E),
+    Reject(R, Option<E>),
+}
+
+pub trait Task<R> {
     type Output;
     type Error;
-    type Future: Future<Output = Result<Self::Output, Self::Error>> + Send + 'static;
+    type Future: Future<Output = Result<Self::Output, Rejection<R, Self::Error>>> + Send;
 
-    fn exec(&self, input: Input) -> Self::Future;
-    fn can_exec(&self, input: &Input) -> bool;
+    fn run(&self, req: R) -> Self::Future;
 }
 
-pub trait IntoTask<I> {
-    type Output;
-    type Error;
-    type Future: Future<Output = Result<Self::Output, Self::Error>> + Send + 'static;
-    type Task: Task<I, Output = Self::Output, Error = Self::Error, Future = Self::Future>;
-
-    fn into_task(self) -> Self::Task;
+pub struct TaskFn<F, I, O, E> {
+    f: F,
+    _i: PhantomData<I>,
+    _o: PhantomData<O>,
+    _e: PhantomData<E>,
 }
 
-impl<T: Task<I>, I> IntoTask<I> for T {
-    type Output = T::Output;
-    type Error = T::Error;
-    type Future = T::Future;
-    type Task = T;
-    fn into_task(self) -> Self::Task {
-        self
-    }
-}
-
-#[derive(Clone)]
-pub struct TaskFn<F, I, O, E, C> {
-    inner: F,
-    _i: std::marker::PhantomData<I>,
-    _o: std::marker::PhantomData<O>,
-    _e: std::marker::PhantomData<E>,
-    check: C,
-}
-
-impl<F, I, O, E, C, U> TaskFn<F, I, O, E, C>
+impl<F, I, O, E> Clone for TaskFn<F, I, O, E>
 where
-    F: Fn(I) -> U,
-    U: Future<Output = Result<O, E>> + Send + 'static,
-    C: Fn(&I) -> bool,
+    F: Clone,
 {
-    pub fn new(service: F, check: C) -> TaskFn<F, I, O, E, C> {
+    fn clone(&self) -> Self {
         TaskFn {
-            inner: service,
-            _i: std::marker::PhantomData,
-            _o: std::marker::PhantomData,
-            _e: std::marker::PhantomData,
-            check,
+            f: self.f.clone(),
+            _i: PhantomData,
+            _o: PhantomData,
+            _e: PhantomData,
         }
     }
 }
 
-impl<F, I, O, E, C, U> Task<I> for TaskFn<F, I, O, E, C>
+impl<F, I, O, E> Copy for TaskFn<F, I, O, E> where F: Copy {}
+
+impl<F, I, O, E, U> TaskFn<F, I, O, E>
 where
     F: Fn(I) -> U,
-    U: Future<Output = Result<O, E>> + Send + 'static,
-    C: Fn(&I) -> bool,
+    U: Future<Output = Result<O, Rejection<I, E>>> + Send + 'static,
+{
+    pub fn new(task: F) -> TaskFn<F, I, O, E> {
+        TaskFn {
+            f: task,
+            _i: PhantomData,
+            _o: PhantomData,
+            _e: PhantomData,
+        }
+    }
+}
+
+impl<F, I, O, E, U> Task<I> for TaskFn<F, I, O, E>
+where
+    F: Fn(I) -> U,
+    U: Future<Output = Result<O, Rejection<I, E>>> + Send,
 {
     type Output = O;
     type Error = E;
     type Future = U;
-
-    fn exec(&self, input: I) -> Self::Future {
-        (self.inner)(input)
-    }
-
-    fn can_exec(&self, input: &I) -> bool {
-        (self.check)(input)
+    fn run(&self, input: I) -> Self::Future {
+        (self.f)(input)
     }
 }
 
-pub struct Transform<FROM, TO, ERROR, C>(C, PhantomData<FROM>, PhantomData<TO>, PhantomData<ERROR>);
+pub struct Reject<T>(T);
 
-impl<FROM, TO, ERROR, C> Transform<FROM, TO, ERROR, C> {
-    pub fn new(trans: C) -> Transform<FROM, TO, ERROR, C> {
-        Transform(trans, PhantomData, PhantomData, PhantomData)
+impl<T> Reject<T> {
+    pub fn new(task: T) -> Reject<T> {
+        Reject(task)
     }
 }
 
-impl<FROM: Send + Sync + 'static, TO: Send + 'static, ERROR: Send + 'static, C> Task<FROM>
-    for Transform<FROM, TO, ERROR, C>
+impl<T, R> Task<R> for Reject<T>
 where
-    C: Fn(FROM) -> TO,
+    T: Task<R>,
 {
-    type Output = TO;
-    type Error = ERROR;
-    type Future = Ready<Result<TO, ERROR>>;
-
-    #[inline]
-    fn exec(&self, input: FROM) -> Self::Future {
-        let out = (self.0)(input);
-        futures_util::future::ok(out)
-    }
-
-    #[inline]
-    fn can_exec(&self, _input: &FROM) -> bool {
-        true
+    type Output = T::Output;
+    type Error = T::Error;
+    type Future = RejectFuture<T, R>;
+    fn run(&self, req: R) -> Self::Future {
+        RejectFuture(self.0.run(req))
     }
 }
 
+#[pin_project]
+pub struct RejectFuture<T: Task<R>, R>(#[pin] T::Future);
+
+impl<T, R> Future for RejectFuture<T, R>
+where
+    T: Task<R>,
+{
+    type Output = Result<T::Output, Rejection<R, T::Error>>;
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let this = self.as_mut().project();
+        match ready!(this.0.poll(cx)) {
+            Ok(s) => Poll::Ready(Ok(s)),
+            Err(Rejection::Err(e)) => Poll::Ready(Err(Rejection::Err(e))),
+            Err(Rejection::Reject(_, Some(e))) => Poll::Ready(Err(Rejection::Err(e))),
+            Err(Rejection::Reject(r, None)) => Poll::Ready(Err(Rejection::Reject(r, None))),
+        }
+    }
+}
+
+impl<A, B, R> Task<R> for Either<A, B>
+where
+    A: Task<R>,
+    B: Task<R, Error = <A as Task<R>>::Error>,
+    R: Send,
+{
+    type Output = Either<A::Output, B::Output>;
+    type Error = A::Error;
+    type Future = EitherFuture<A, B, R>;
+    fn run(&self, req: R) -> Self::Future {
+        match self {
+            Either::A(a) => EitherFuture {
+                fut: EitherPromise::First(a.run(req)),
+                _r: std::marker::PhantomData,
+            },
+            Either::B(b) => EitherFuture {
+                fut: EitherPromise::Second(b.run(req)),
+                _r: std::marker::PhantomData,
+            },
+        }
+    }
+}
+
+#[pin_project]
+enum EitherPromise<A, B> {
+    First(#[pin] A),
+    Second(#[pin] B),
+}
+
+#[pin_project]
+pub struct EitherFuture<A, B, R>
+where
+    A: Task<R>,
+    B: Task<R, Error = <A as Task<R>>::Error>,
+{
+    #[pin]
+    fut: EitherPromise<A::Future, B::Future>,
+    _r: std::marker::PhantomData<R>,
+}
+
+impl<A, B, R> EitherFuture<A, B, R>
+where
+    A: Task<R>,
+    B: Task<R, Error = <A as Task<R>>::Error>,
+{
+    pub fn a(fut: A::Future) -> EitherFuture<A, B, R> {
+        EitherFuture {
+            fut: EitherPromise::First(fut),
+            _r: std::marker::PhantomData,
+        }
+    }
+
+    pub fn b(fut: B::Future) -> EitherFuture<A, B, R> {
+        EitherFuture {
+            fut: EitherPromise::Second(fut),
+            _r: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<A, B, R> Future for EitherFuture<A, B, R>
+where
+    A: Task<R>,
+    B: Task<R, Error = <A as Task<R>>::Error>,
+{
+    type Output = Result<Either<A::Output, B::Output>, Rejection<R, A::Error>>;
+
+    #[project]
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let this = self.as_mut().project();
+        #[project]
+        match this.fut.project() {
+            EitherPromise::First(fut) => match ready!(fut.poll(cx)) {
+                Ok(o) => Poll::Ready(Ok(Either::A(o))),
+                Err(e) => Poll::Ready(Err(e)),
+            },
+            EitherPromise::Second(fut) => match ready!(fut.poll(cx)) {
+                Ok(o) => Poll::Ready(Ok(Either::B(o))),
+                Err(e) => Poll::Ready(Err(e)),
+            },
+        }
+    }
+}
