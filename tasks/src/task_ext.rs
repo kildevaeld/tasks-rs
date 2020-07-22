@@ -3,7 +3,6 @@ use super::{
     Tuple, Unroll,
 };
 use futures_core::TryFuture;
-use std::future::Future;
 
 pub trait TaskExt<R>: Task<R> + Sized {
     fn or<T: Task<R, Error = Self::Error>>(self, task: T) -> Or<Self, T> {

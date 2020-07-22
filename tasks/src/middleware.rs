@@ -1,5 +1,4 @@
 use super::{Rejection, Task};
-use futures_core::TryFuture;
 use std::future::Future;
 use std::marker::PhantomData;
 
