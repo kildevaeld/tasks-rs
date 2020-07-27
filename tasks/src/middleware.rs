@@ -14,6 +14,18 @@ pub struct MiddlewareFn<R, F, T> {
     _t: PhantomData<T>,
 }
 
+impl<R, F: Clone, T> Clone for MiddlewareFn<R, F, T> {
+    fn clone(&self) -> Self {
+        MiddlewareFn {
+            cb: self.cb.clone(),
+            _r: PhantomData,
+            _t: PhantomData,
+        }
+    }
+}
+
+impl<R, F: Copy, T> Copy for MiddlewareFn<R, F, T> {}
+
 impl<R, F, T> MiddlewareFn<R, F, T> {
     pub fn new(cb: F) -> MiddlewareFn<R, F, T> {
         MiddlewareFn {
