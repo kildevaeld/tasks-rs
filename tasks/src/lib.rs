@@ -17,10 +17,11 @@ mod pipe;
 mod task;
 mod task_ext;
 mod task_state;
+mod unify;
 mod unroll;
 pub mod util;
 
 pub use self::{
     and::*, and_then::*, filter::*, filter_pipe::*, generic::*, map::*, middleware::*, or::*,
-    pass::*, pipe::*, task::*, task_ext::*, task_state::*, unroll::*,
+    pass::*, pipe::*, task::*, task_ext::*, task_state::*, unify::*, unroll::*,
 };

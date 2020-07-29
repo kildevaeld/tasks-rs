@@ -1,6 +1,6 @@
 use super::{
-    And, AndThen, Combine, Extract, FilterPipe, Func, Map, Middleware, Or, Pipe, Reject, Task,
-    Tuple, Unroll,
+    And, AndThen, Combine, Either, Extract, FilterPipe, Func, Map, Middleware, Or, Pipe, Reject,
+    Task, Tuple, Unify, Unroll,
 };
 use futures_core::TryFuture;
 
@@ -91,6 +91,13 @@ pub trait TaskExt<R>: Task<R> + Sized {
     //     U: Future,
     // {
     // }
+
+    fn unify<T>(self) -> Unify<Self>
+    where
+        Self: Task<R, Output = Either<(R, (T,)), (R, (T,))>> + Sized,
+    {
+        Unify { filter: self }
+    }
 }
 
 impl<R, T> TaskExt<R> for T where T: Task<R> {}
