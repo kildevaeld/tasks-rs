@@ -95,6 +95,7 @@ pub trait TaskExt<R>: Task<R> + Sized {
     fn unify<T>(self) -> Unify<Self>
     where
         Self: Task<R, Output = Either<(R, (T,)), (R, (T,))>> + Sized,
+        T: Tuple,
     {
         Unify { filter: self }
     }

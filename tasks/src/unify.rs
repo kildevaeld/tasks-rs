@@ -14,11 +14,11 @@ pub struct Unify<F> {
 
 impl<F, T, R> Task<R> for Unify<F>
 where
-    F: Task<R, Output = Either<(R, (T,)), (R, (T,))>>,
-    T: Tuple,
+    F: Task<R, Output = Either<(R, T), (R, T)>>,
     R: Send,
+    T: Tuple,
 {
-    type Output = (R, (T,));
+    type Output = (R, T);
     type Error = F::Error;
     type Future = UnifyFuture<F::Future, R>;
     #[inline]
@@ -40,9 +40,10 @@ pub struct UnifyFuture<F, R> {
 
 impl<F, R, T> Future for UnifyFuture<F, R>
 where
-    F: TryFuture<Ok = Either<(R, (T,)), (R, (T,))>>,
+    F: TryFuture<Ok = Either<(R, T), (R, T)>>,
+    T: Tuple,
 {
-    type Output = Result<(R, (T,)), F::Error>;
+    type Output = Result<(R, T), F::Error>;
 
     #[inline]
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
