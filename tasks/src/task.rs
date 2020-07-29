@@ -71,6 +71,7 @@ where
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Reject<T>(T);
 
 impl<T> Reject<T> {
