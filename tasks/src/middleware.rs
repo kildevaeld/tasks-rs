@@ -72,3 +72,15 @@ where
         (self.cb)(self.task.clone(), req)
     }
 }
+
+impl<R, F: Clone, T: Clone> Clone for MiddlewareFnTask<R, F, T> {
+    fn clone(&self) -> Self {
+        MiddlewareFnTask {
+            cb: self.cb.clone(),
+            task: self.task.clone(),
+            _a: PhantomData,
+        }
+    }
+}
+
+impl<R, F: Copy, T: Copy> Copy for MiddlewareFnTask<R, F, T> {}
