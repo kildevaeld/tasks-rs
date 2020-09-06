@@ -4,5 +4,6 @@ members = [
     "tasks",
     # "tasks-core",
     #"tasks-http",
-    "tasks-vinyl"
+    "tasks-vinyl",
+    "willow"
 ]

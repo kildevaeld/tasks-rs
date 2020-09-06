@@ -4,7 +4,8 @@ use std::io;
 
 #[derive(Debug)]
 pub enum Error {
-    IoError(io::Error),
+    Io(io::Error),
+    FileAlreadyExists,
 }
 
 impl fmt::Display for Error {
@@ -17,6 +18,6 @@ impl StdError for Error {}
 
 impl From<io::Error> for Error {
     fn from(error: io::Error) -> Self {
-        Self::IoError(error)
+        Self::Io(error)
     }
 }

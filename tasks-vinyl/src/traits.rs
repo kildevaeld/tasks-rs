@@ -1,7 +1,7 @@
 use super::util;
 use super::{Content, Error, File};
 use futures_core::{future::BoxFuture, ready, Stream};
-use futures_util::{stream::Buffered, StreamExt, TryStreamExt};
+use futures_util::{stream::Buffered, FutureExt, StreamExt, TryStreamExt};
 use pin_project::{pin_project, project};
 use std::future::Future;
 use std::pin::Pin;
@@ -25,6 +25,28 @@ pub trait VinylStream: Stream {
         T::Output: Reply,
     {
         Pipe { stream: self, task }
+    }
+
+    fn write_to<D: VinylStreamDestination>(
+        mut self,
+        path: D,
+    ) -> BoxFuture<'static, Result<usize, Error>>
+    where
+        Self: Sized + std::marker::Unpin + Send + 'static,
+        Self::Item: Future<Output = Result<File, Error>> + Send,
+        D: Send + Sync + 'static,
+        D::Future: Send,
+    {
+        async move {
+            let mut count: usize = 0;
+            while let Some(next) = self.next().await {
+                let next = next.await?;
+                path.write(next).await?;
+                count += 1;
+            }
+            Ok(count)
+        }
+        .boxed()
     }
 }
 
@@ -109,3 +131,35 @@ where
         }
     }
 }
+
+pub trait VinylStreamDestination {
+    type Future: Future<Output = Result<(), Error>>;
+    fn write(&self, file: File) -> Self::Future;
+}
+
+// #[pin_project]
+// pub struct DestinationStream<D, S> {
+//     dest: D,
+//     #[pin]
+//     stream: S,
+// }
+
+// impl<D, S> Stream for DestinationStream<D, S>
+// where
+//     D: VinylStreamDestination,
+//     S: Stream,
+//     S::Item: Future<Output = Result<File, Error>>,
+// {
+//     type Item = Result<D::Future, Error>;
+//     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+//         let this = self.project();
+//         match ready!(this.stream.poll_next(cx)) {
+//             Some(Ok(s)) => {
+//                 let out = this.dest.write(s);
+//                 Poll::Ready(Some(Ok(out)))
+//             }
+//             Some(Err(e)) => Poll::Ready(Some(Err(e))),
+//             None => Poll::Ready(None),
+//         }
+//     }
+// }
