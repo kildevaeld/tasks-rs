@@ -10,11 +10,24 @@ use std::task::{Context, Poll};
 use tasks::{Rejection, Task};
 use vfs_async::{Globber, OpenOptions, VFile, VPath, VFS};
 
-pub trait Reply {}
+pub trait Reply {
+    type Future: Future<Output = Result<File, Error>>;
+    fn into_file(self) -> Self::Future;
+}
 
-impl Reply for File {}
+impl Reply for File {
+    type Future = futures_util::future::Ready<Result<File, Error>>;
+    fn into_file(self) -> Self::Future {
+        futures_util::future::ok(self)
+    }
+}
 
-impl Reply for () {}
+impl Reply for (File, ()) {
+    type Future = futures_util::future::Ready<Result<File, Error>>;
+    fn into_file(self) -> Self::Future {
+        futures_util::future::ok(self.0)
+    }
+}
 
 pub trait VinylStream: Stream {
     fn pipe<T>(self, task: T) -> Pipe<Self, T>
@@ -135,6 +148,21 @@ where
 pub trait VinylStreamDestination {
     type Future: Future<Output = Result<(), Error>>;
     fn write(&self, file: File) -> Self::Future;
+}
+
+pub trait IntoVinylStreamDestination {
+    type Destination: VinylStreamDestination;
+    fn into_destination(self) -> Self::Destination;
+}
+
+impl<T> IntoVinylStreamDestination for T
+where
+    T: VinylStreamDestination,
+{
+    type Destination = T;
+    fn into_destination(self) -> Self::Destination {
+        self
+    }
 }
 
 // #[pin_project]

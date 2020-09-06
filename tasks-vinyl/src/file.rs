@@ -6,11 +6,7 @@ use futures_util::stream::{self, StreamExt};
 use mime::Mime;
 use std::fmt;
 use std::future::Future;
-use std::io::Read;
-use std::path::PathBuf;
 use std::pin::Pin;
-use std::task::{Context, Poll};
-use tokio::sync::Mutex;
 
 pub enum Content {
     Stream(Pin<Box<dyn Stream<Item = Result<Bytes, Error>> + Send>>),
@@ -26,6 +22,37 @@ impl Content {
             Content::None => stream::empty().boxed(),
         }
     }
+
+    pub fn from_stream<S>(stream: S) -> Content
+    where
+        S: Stream<Item = Result<Bytes, Error>> + Send + 'static,
+    {
+        Content::Stream(Box::pin(stream))
+    }
+}
+
+impl From<Bytes> for Content {
+    fn from(bytes: Bytes) -> Self {
+        Content::Bytes(bytes)
+    }
+}
+
+impl From<String> for Content {
+    fn from(bytes: String) -> Self {
+        Content::Bytes(Bytes::from(bytes))
+    }
+}
+
+impl From<&'static str> for Content {
+    fn from(bytes: &'static str) -> Self {
+        Content::Bytes(Bytes::from(bytes))
+    }
+}
+
+impl From<()> for Content {
+    fn from(bytes: ()) -> Self {
+        Content::None
+    }
 }
 
 impl fmt::Debug for Content {
@@ -33,17 +60,6 @@ impl fmt::Debug for Content {
         write!(f, "Content")
     }
 }
-
-// #[derive(Debug, Clone, T)]
-// pub enum FileType {
-//     Dir,
-//     File,
-// }
-
-// pub struct Metadata {
-//     pub size: u64,
-//     pub file_type: FileType,
-// }
 
 #[derive(Debug)]
 pub struct File {
@@ -53,7 +69,23 @@ pub struct File {
     pub size: u64,
 }
 
-pub trait IntoFile {
-    type Future: Future<Output = File>;
-    fn into_file(self) -> Self::Future;
+impl File {
+    pub fn new(
+        path: impl ToString,
+        content: impl Into<Content>,
+        mime: impl Into<Mime>,
+        size: u64,
+    ) -> File {
+        File {
+            path: path.to_string(),
+            content: content.into(),
+            mime: mime.into(),
+            size,
+        }
+    }
 }
+
+// pub trait IntoFile {
+//     type Future: Future<Output = File>;
+//     fn into_file(self) -> Self::Future;
+// }

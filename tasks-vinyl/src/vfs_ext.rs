@@ -1,12 +1,12 @@
 use super::error::Error;
 use super::util::ByteStream;
-use super::{Content, File, VinylStreamDestination};
+use super::{Content, File, IntoVinylStreamDestination, VinylStreamDestination};
 use futures_util::{
     future::BoxFuture, pin_mut, stream::BoxStream, AsyncReadExt, AsyncWriteExt, FutureExt,
     StreamExt, TryStreamExt,
 };
 use mime_guess;
-use vfs_async::{Globber, OpenOptions, VMetadata, VPath};
+use vfs_async::{Globber, OpenOptions, VMetadata, VPath, VFS};
 
 pub trait VPathExt: VPath {
     fn vinyl(&self) -> BoxFuture<'static, Result<BoxStream<'static, Result<File, Error>>, Error>>
@@ -126,3 +126,5 @@ where
         .boxed()
     }
 }
+
+pub trait VFSExt: VFS {}

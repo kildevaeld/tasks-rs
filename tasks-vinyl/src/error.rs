@@ -6,6 +6,7 @@ use std::io;
 pub enum Error {
     Io(io::Error),
     FileAlreadyExists,
+    Other(Box<dyn StdError + Send>),
 }
 
 impl fmt::Display for Error {

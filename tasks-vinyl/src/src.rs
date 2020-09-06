@@ -3,14 +3,8 @@ use super::{Content, Error, File};
 use futures_core::{future::BoxFuture, ready, Stream};
 use futures_util::{stream::Buffered, StreamExt, TryStreamExt};
 use mime_guess;
-use pin_project::{pin_project, project};
 use std::future::Future;
-use std::path::Path;
-use std::pin::Pin;
-use std::sync::Arc;
-use std::task::{Context, Poll};
-use tasks::{Rejection, Task};
-use tokio::sync::Mutex;
+
 use vfs_async::{Globber, OpenOptions, VFile, VMetadata, VPath, VFS};
 pub async fn src<V>(
     vfs: V,

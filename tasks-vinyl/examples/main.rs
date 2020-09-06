@@ -12,9 +12,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out = PhysicalFS::new("./output")?;
     let out = src(vfs, "**/*.rs")
         .await?
+        // .pipe(filters::mime_exact(mime::Mime).pipe(task!(|file| async move { Ok(file) })))
         .pipe(task!(|file| async move { Ok(file) }))
-        .pipe(task!(|file| async move { Ok(file) }))
-        .pipe(dest(out))
+        .pipe(out.path("."))
         .buffered(10)
         .collect::<Vec<_>>()
         .await;
