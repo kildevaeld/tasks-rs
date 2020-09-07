@@ -67,6 +67,7 @@ where
     T::Output: Extract<R>,
     F: Func<<T::Output as Extract<R>>::Extract>,
 {
+    #[allow(clippy::type_complexity)]
     type Output = Result<(R, (F::Output,)), Rejection<R, T::Error>>;
 
     #[inline]

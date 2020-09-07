@@ -1,3 +1,4 @@
+#![deny(clippy::all)]
 #[macro_use]
 mod macros;
 

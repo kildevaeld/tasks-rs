@@ -8,7 +8,6 @@ edition = "2018"
 pin-project = "0.4"
 futures-core = "0.3"
 futures-util = "0.3"
-# tokio = { version = "0.2", features = [ "blocking" ], optional = true }
 
 [dev-dependencies]
 futures = "0.3"

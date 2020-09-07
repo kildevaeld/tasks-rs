@@ -176,6 +176,7 @@ where
     A: Task<R>,
     B: Task<R, Error = <A as Task<R>>::Error>,
 {
+    #[allow(clippy::type_complexity)]
     type Output = Result<Either<A::Output, B::Output>, Rejection<R, A::Error>>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {

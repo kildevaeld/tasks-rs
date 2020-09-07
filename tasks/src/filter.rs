@@ -21,6 +21,7 @@ where
 {
     type Output = (R, U::Ok);
     type Error = U::Error;
+    #[allow(clippy::type_complexity)]
     type Future =
         Pin<Box<dyn Future<Output = Result<Self::Output, Rejection<R, Self::Error>>> + Send>>;
 
@@ -28,10 +29,7 @@ where
     fn run(&self, mut req: R) -> Self::Future {
         let func = self.func.clone();
         let future = async move {
-            let ret = func(&mut req)
-                .into_future()
-                .await
-                .map_err(|e| Rejection::Err(e))?;
+            let ret = func(&mut req).into_future().await.map_err(Rejection::Err)?;
             Ok((req, ret))
         };
 

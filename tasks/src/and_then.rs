@@ -67,6 +67,7 @@ where
     F::Output: TryFuture + Send,
     <F::Output as TryFuture>::Error: Into<T::Error>,
 {
+    #[allow(clippy::type_complexity)]
     type Output = Result<(R, (<F::Output as TryFuture>::Ok,)), Rejection<R, T::Error>>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {

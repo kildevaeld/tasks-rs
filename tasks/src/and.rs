@@ -25,6 +25,7 @@ where
         <<U::Output as Extract<R>>::Extract as Tuple>::HList,
     >>::Output as HList>::Tuple: Send,
 {
+    #[allow(clippy::type_complexity)]
     type Output = (
         R,
         <<<<T::Output as Extract<R>>::Extract as Tuple>::HList as Combine<
@@ -79,6 +80,7 @@ where
     <<T::Output as Extract<R>>::Extract as Tuple>::HList:
         Combine<<<U::Output as Extract<R>>::Extract as Tuple>::HList> + Send,
 {
+    #[allow(clippy::type_complexity)]
     type Output = Result<
         (
             R,
@@ -103,7 +105,7 @@ where
                 StateProj::Second(ex1, second) => {
                     let (req, ex2) = match ready!(second.poll(cx)) {
                         Ok(second) => second.unpack(),
-                        Err(err) => return Poll::Ready(Err(From::from(err))),
+                        Err(err) => return Poll::Ready(Err(err)),
                     };
                     let ex3 = ex1.take().unwrap().hlist().combine(ex2.hlist()).flatten();
                     self.set(AndFuture { state: State::Done });
