@@ -1,6 +1,6 @@
 use super::generic::Either;
 use futures_core::ready;
-use pin_project::{pin_project, project};
+use pin_project::pin_project;
 use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
@@ -134,7 +134,7 @@ where
     }
 }
 
-#[pin_project]
+#[pin_project(project = EitherPromiseProj)]
 enum EitherPromise<A, B> {
     First(#[pin] A),
     Second(#[pin] B),
@@ -178,16 +178,15 @@ where
 {
     type Output = Result<Either<A::Output, B::Output>, Rejection<R, A::Error>>;
 
-    #[project]
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.as_mut().project();
-        #[project]
+
         match this.fut.project() {
-            EitherPromise::First(fut) => match ready!(fut.poll(cx)) {
+            EitherPromiseProj::First(fut) => match ready!(fut.poll(cx)) {
                 Ok(o) => Poll::Ready(Ok(Either::A(o))),
                 Err(e) => Poll::Ready(Err(e)),
             },
-            EitherPromise::Second(fut) => match ready!(fut.poll(cx)) {
+            EitherPromiseProj::Second(fut) => match ready!(fut.poll(cx)) {
                 Ok(o) => Poll::Ready(Ok(Either::B(o))),
                 Err(e) => Poll::Ready(Err(e)),
             },

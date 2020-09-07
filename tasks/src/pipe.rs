@@ -1,6 +1,6 @@
 use super::{Rejection, Task};
 use futures_core::{ready, TryFuture};
-use pin_project::{pin_project, project};
+use pin_project::pin_project;
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
@@ -31,7 +31,7 @@ where
     }
 }
 
-#[pin_project]
+#[pin_project(project = PipeFutureStateProj)]
 enum PipeFutureState<T1, T2, R>
 where
     T1: Task<R>,
@@ -70,20 +70,18 @@ where
     T2: Clone + Task<<T1 as Task<R>>::Output, Error = <T1 as Task<R>>::Error>,
 {
     type Output = Result<T2::Output, Rejection<R, T2::Error>>;
-    #[project]
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         loop {
             let pin = self.as_mut().project();
-            #[project]
             let fut2 = match pin.state.project() {
-                PipeFutureState::First(first, second) => match ready!(first.try_poll(cx)) {
+                PipeFutureStateProj::First(first, second) => match ready!(first.try_poll(cx)) {
                     Ok(ret) => second.run(ret),
                     Err(Rejection::Err(err)) => return Poll::Ready(Err(Rejection::Err(err))),
                     Err(Rejection::Reject(ret, e)) => {
                         return Poll::Ready(Err(Rejection::Reject(ret, e)))
                     }
                 },
-                PipeFutureState::Second(fut) => match ready!(fut.try_poll(cx)) {
+                PipeFutureStateProj::Second(fut) => match ready!(fut.try_poll(cx)) {
                     Ok(some) => {
                         self.set(PipeFuture {
                             state: PipeFutureState::Done,
@@ -98,7 +96,7 @@ where
                         panic!("rejected");
                     }
                 },
-                PipeFutureState::Done => panic!("poll after done"),
+                PipeFutureStateProj::Done => panic!("poll after done"),
             };
 
             self.set(PipeFuture {

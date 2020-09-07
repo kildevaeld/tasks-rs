@@ -1,7 +1,7 @@
 use super::generic::Extract;
 use super::{Rejection, Task};
 use futures_core::{ready, TryFuture};
-use pin_project::{pin_project, project};
+use pin_project::pin_project;
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
@@ -33,7 +33,7 @@ where
     }
 }
 
-#[pin_project]
+#[pin_project(project = FilterPipeFutureStateProj)]
 enum FilterPipeFutureState<T1, T2, R>
 where
     T1: Task<R>,
@@ -73,20 +73,20 @@ where
     T2: Clone + Task<<T1 as Task<R>>::Output, Error = <T1 as Task<R>>::Error>,
 {
     type Output = Result<T2::Output, Rejection<R, T2::Error>>;
-    #[project]
+
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         loop {
             let pin = self.as_mut().project();
-            #[project]
             let fut2 = match pin.state.project() {
-                FilterPipeFutureState::First(first, second) => match ready!(first.try_poll(cx)) {
+                FilterPipeFutureStateProj::First(first, second) => match ready!(first.try_poll(cx))
+                {
                     Ok(ret) => second.run(ret),
                     Err(Rejection::Err(err)) => return Poll::Ready(Err(Rejection::Err(err))),
                     Err(Rejection::Reject(ret, e)) => {
                         return Poll::Ready(Err(Rejection::Reject(ret, e)))
                     }
                 },
-                FilterPipeFutureState::Second(fut) => match ready!(fut.try_poll(cx)) {
+                FilterPipeFutureStateProj::Second(fut) => match ready!(fut.try_poll(cx)) {
                     Ok(some) => {
                         self.set(FilterPipeFuture {
                             state: FilterPipeFutureState::Done,
@@ -99,7 +99,7 @@ where
                         return Poll::Ready(Err(Rejection::Reject(req, e)));
                     }
                 },
-                FilterPipeFutureState::Done => panic!("poll after done"),
+                FilterPipeFutureStateProj::Done => panic!("poll after done"),
             };
 
             self.set(FilterPipeFuture {

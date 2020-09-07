@@ -1,7 +1,7 @@
 use super::Extract;
 use crate::{Combine, HList, Rejection, Task, Tuple};
 use futures_core::ready;
-use pin_project::{pin_project, project};
+use pin_project::pin_project;
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
@@ -59,7 +59,7 @@ where
     state: State<R, T, U>,
 }
 
-#[pin_project]
+#[pin_project(project = StateProj)]
 enum State<R, T: Task<R>, U: Task<R>>
 where
     T::Output: Extract<R>,
@@ -89,20 +89,18 @@ where
         Rejection<R, U::Error>,
     >;
 
-    #[project]
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         loop {
             let pin = self.as_mut().project();
-            #[project]
             let (ex1, fut2) = match pin.state.project() {
-                State::First(first, second) => match ready!(first.poll(cx)) {
+                StateProj::First(first, second) => match ready!(first.poll(cx)) {
                     Ok(ret) => {
                         let (req, first) = ret.unpack();
                         (first, second.run(req))
                     }
                     Err(err) => return Poll::Ready(Err(err)),
                 },
-                State::Second(ex1, second) => {
+                StateProj::Second(ex1, second) => {
                     let (req, ex2) = match ready!(second.poll(cx)) {
                         Ok(second) => second.unpack(),
                         Err(err) => return Poll::Ready(Err(From::from(err))),
@@ -111,7 +109,7 @@ where
                     self.set(AndFuture { state: State::Done });
                     return Poll::Ready(Ok((req, ex3)));
                 }
-                State::Done => panic!("polled after complete"),
+                StateProj::Done => panic!("polled after complete"),
             };
 
             self.set(AndFuture {

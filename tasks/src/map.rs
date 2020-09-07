@@ -75,8 +75,6 @@ where
         match ready!(pin.extract.try_poll(cx)) {
             Ok(ret) => {
                 let (req, ex) = ret.unpack();
-                // let ex = (pin.callback.call(ex),);
-                // Poll::Ready(Ok(ex))
                 let ex = pin.callback.call(ex);
                 Poll::Ready(Ok((req, (ex,))))
             }
