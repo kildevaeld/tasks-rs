@@ -49,16 +49,6 @@ pub trait ResourceExt: Resource {
             })
             .boxed()])
         .boxed()
-        // let file = self.body().await;
-        // futures_util::stream::iter(vec![Ok(File {
-        //     content: Content::Stream(Box::pin(
-        //         ByteStream::new(file).map_err(|err| VinylError::Io(err)),
-        //     )),
-        //     path: self.name().to_string(),
-        //     size: self.size(),
-        //     mime: self.mime().clone(),
-        // })])
-        // .boxed()
     }
 }
 
@@ -109,51 +99,51 @@ pub trait SourceExt: Source {
             .boxed())
     }
 
-    async fn write_to<D>(&self, dest: D) -> Result<usize, Error>
-    where
-        D: VinylStreamDestination + Send + Sync + 'static,
-        D::Future: Send,
-        Self: Send + 'static,
-        Self::Stream: Send,
-        Self::Resource: Sync + Send + 'static,
-        <Self::Resource as Resource>::Read: Send,
-        <Self::Resource as Resource>::Future: Send,
-    {
-        self.vinyl()
-            .await?
-            .write_to(dest)
-            .await
-            .map_err(Error::from)
-    }
+    // async fn write_to<D>(&self, dest: D) -> Result<usize, Error>
+    // where
+    //     D: VinylStreamDestination + Send + Sync + 'static,
+    //     D::Future: Send,
+    //     Self: Send + 'static,
+    //     Self::Stream: Send,
+    //     Self::Resource: Sync + Send + 'static,
+    //     <Self::Resource as Resource>::Read: Send,
+    //     <Self::Resource as Resource>::Future: Send,
+    // {
+    //     self.vinyl()
+    //         .await?
+    //         .write_to(dest)
+    //         .await
+    //         .map_err(Error::from)
+    // }
 }
 
 impl<T> SourceExt for T where T: Source {}
 
-pub trait ResourceStream: Stream + Sized {
-    fn vinyl(self) -> BoxStream<'static, Result<File, VinylError>>
-    where
-        Self: Send + 'static,
-        Self::Item: Resource + Send + Sync + 'static,
-        <Self::Item as Resource>::Read: Send,
-        <Self::Item as Resource>::Future: Send,
-    {
-        self.then(|m| async move {
-            let file = m
-                .body()
-                .await
-                .map_err(|err| VinylError::Other(Box::new(err)))?;
-            Result::<_, VinylError>::Ok(File {
-                content: Content::Stream(Box::pin(
-                    ByteStream::new(file).map_err(|err| VinylError::Io(err)),
-                )),
-                path: m.name().to_string(),
-                size: m.size(),
-                mime: m.mime().clone(),
-            })
-        })
-        .boxed()
-    }
-}
+// pub trait ResourceStream: Stream + Sized {
+//     fn vinyl(self) -> BoxStream<'static, Result<File, VinylError>>
+//     where
+//         Self: Send + 'static,
+//         Self::Item: Resource + Send + Sync + 'static,
+//         <Self::Item as Resource>::Read: Send,
+//         <Self::Item as Resource>::Future: Send,
+//     {
+//         self.then(|m| async move {
+//             let file = m
+//                 .body()
+//                 .await
+//                 .map_err(|err| VinylError::Other(Box::new(err)))?;
+//             Result::<_, VinylError>::Ok(File {
+//                 content: Content::Stream(Box::pin(
+//                     ByteStream::new(file).map_err(|err| VinylError::Io(err)),
+//                 )),
+//                 path: m.name().to_string(),
+//                 size: m.size(),
+//                 mime: m.mime().clone(),
+//             })
+//         })
+//         .boxed()
+//     }
+// }
 
 pub struct VfsResource<P> {
     path: P,

@@ -1,25 +1,31 @@
 use crate::Error;
 use bytes::Bytes;
-use futures_core::stream::{BoxStream, Stream};
-use futures_io::AsyncRead;
+use futures_core::{
+    future::BoxFuture,
+    stream::{BoxStream, Stream},
+};
 use futures_util::stream::{self, StreamExt};
 use mime::Mime;
 use std::fmt;
-use std::future::Future;
-use std::pin::Pin;
+
+pub trait Opener: Send + Sync {
+    fn open(&self) -> BoxFuture<'static, Result<BoxStream<'static, Result<Bytes, Error>>, Error>>;
+}
 
 pub enum Content {
-    Stream(Pin<Box<dyn Stream<Item = Result<Bytes, Error>> + Send>>),
+    Stream(BoxStream<'static, Result<Bytes, Error>>),
     Bytes(Bytes),
+    Ref(Box<dyn Opener>),
     None,
 }
 
 impl Content {
-    pub fn into_stream(self) -> BoxStream<'static, Result<Bytes, Error>> {
+    pub async fn into_stream(self) -> Result<BoxStream<'static, Result<Bytes, Error>>, Error> {
         match self {
-            Content::Stream(s) => s,
-            Content::Bytes(b) => stream::iter(vec![Ok(b)]).boxed(),
-            Content::None => stream::empty().boxed(),
+            Content::Stream(s) => Ok(s),
+            Content::Bytes(b) => Ok(stream::iter(vec![Ok(b)]).boxed()),
+            Content::Ref(o) => Ok(o.open().await?),
+            Content::None => Ok(stream::empty().boxed()),
         }
     }
 
@@ -84,8 +90,3 @@ impl File {
         }
     }
 }
-
-// pub trait IntoFile {
-//     type Future: Future<Output = File>;
-//     fn into_file(self) -> Self::Future;
-// }

@@ -18,15 +18,15 @@ vfs-async = { git = "https://github.com/kildevaeld/vfs-rs" }
 # tokio = { version = "0.2", features = [ "sync" ]}
 mime = "0.3.4"
 mime_guess = "2"
-tokio = { version = "0.2", features = [ "blocking" ], optional = true }
-
+tokio = { version = "0.2", features = [ "blocking", "fs", "sync" ], optional = true }
+pathutils = { git = "https://github.com/kildevaeld/pathutils-rs" }
 # async-trait = "0.1"
 
 [dev-dependencies]
-tokio = { version = "0.2", features = [ "macros" ]}
+tokio = { version = "0.2", features = [ "full" ]}
 
 [features]
-default = [ ]
+default = [ "tokio" ]
 
 
 [[example]]

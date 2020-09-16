@@ -194,3 +194,13 @@ where
         }
     }
 }
+
+// impl<T, R> IntoTask<R> for T
+// where
+//     T: Task<R>,
+// {
+//     type Task = T;
+//     fn into_task(self) -> Self::Task {
+//         self
+//     }
+// }

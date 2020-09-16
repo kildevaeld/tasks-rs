@@ -1,11 +1,10 @@
-use super::util;
+use super::vfs_ext::PathOpener;
 use super::{Content, Error, File};
-use futures_core::{future::BoxFuture, ready, Stream};
-use futures_util::{stream::Buffered, StreamExt, TryStreamExt};
+use futures_core::Stream;
+use futures_util::{StreamExt, TryStreamExt};
 use mime_guess;
 use std::future::Future;
-
-use vfs_async::{Globber, OpenOptions, VFile, VMetadata, VPath, VFS};
+use vfs_async::{Globber, VMetadata, VPath, VFS};
 pub async fn src<V>(
     vfs: V,
     glob: &str,
@@ -22,11 +21,12 @@ where
             match ret {
                 Ok(ret) => {
                     let meta = ret.metadata().await?;
-                    let content = ret.open(OpenOptions::new().read(true)).await?;
-                    let stream = util::ByteStream::new(content).map_err(|e| e.into());
+                    // let content = ret.open(OpenOptions::new().read(true)).await?;
+                    // let stream = util::ByteStream::new(content).map_err(|e| e.into());
                     Ok(File {
                         path: ret.to_string().as_ref().to_owned(),
-                        content: Content::Stream(Box::pin(stream)),
+                        // content: Content::Stream(Box::pin(stream)),
+                        content: Content::Ref(Box::new(PathOpener(ret.clone()))),
                         size: meta.len(),
                         mime: mime_guess::from_path(ret.file_name().unwrap_or(String::from("")))
                             .first_or_octet_stream(),

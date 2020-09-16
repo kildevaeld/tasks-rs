@@ -1,5 +1,5 @@
 use super::util;
-use super::{Content, Error, File};
+use super::{runtime::Mutex, Content, Error, File};
 use futures_core::{future::BoxFuture, ready, Stream};
 use futures_util::{stream::Buffered, FutureExt, StreamExt, TryStreamExt};
 use pin_project::{pin_project, project};
@@ -41,23 +41,26 @@ pub trait VinylStream: Stream {
     }
 
     fn write_to<D: VinylStreamDestination>(
-        mut self,
-        path: D,
-    ) -> BoxFuture<'static, Result<usize, Error>>
+        self,
+        mut path: D,
+    ) -> BoxFuture<'static, Result<D::Output, Error>>
     where
-        Self: Sized + std::marker::Unpin + Send + 'static,
+        Self: Sized + Send + 'static,
         Self::Item: Future<Output = Result<File, Error>> + Send,
         D: Send + Sync + 'static,
-        D::Future: Send,
     {
+        // self.buffer_unordered(10)
+        //     .and_then(move |file| path.write(file))
+        //     //.try_fold(0, |prev, _| async move { Ok(prev + 1) })
+        //     .boxed()
+        let this = self;
         async move {
-            let mut count: usize = 0;
-            while let Some(next) = self.next().await {
+            futures_util::pin_mut!(this);
+            while let Some(next) = this.next().await {
                 let next = next.await?;
                 path.write(next).await?;
-                count += 1;
             }
-            Ok(count)
+            Ok(path.finish().await?)
         }
         .boxed()
     }
@@ -146,8 +149,9 @@ where
 }
 
 pub trait VinylStreamDestination {
-    type Future: Future<Output = Result<(), Error>>;
-    fn write(&self, file: File) -> Self::Future;
+    type Output;
+    fn write(&mut self, _file: File) -> BoxFuture<'static, Result<(), Error>>;
+    fn finish(self) -> BoxFuture<'static, Result<Self::Output, Error>>;
 }
 
 pub trait IntoVinylStreamDestination {
@@ -162,6 +166,38 @@ where
     type Destination = T;
     fn into_destination(self) -> Self::Destination {
         self
+    }
+}
+
+pub struct Discard;
+
+impl VinylStreamDestination for Discard {
+    type Output = ();
+    fn write(&mut self, _file: File) -> BoxFuture<'static, Result<(), Error>> {
+        futures_util::future::ok(()).boxed()
+    }
+    fn finish(self) -> BoxFuture<'static, Result<Self::Output, Error>> {
+        futures_util::future::ok(()).boxed()
+    }
+}
+
+#[derive(Default)]
+pub struct Vector(Arc<Mutex<Vec<Result<File, Error>>>>);
+
+impl VinylStreamDestination for Vector {
+    type Output = Vec<Result<File, Error>>;
+    fn write(&mut self, _file: File) -> BoxFuture<'static, Result<(), Error>> {
+        let out = self.0.clone();
+        async move {
+            let mut out = out.lock().await;
+            out.push(Ok(_file));
+            Ok(())
+        }
+        .boxed()
+    }
+
+    fn finish(self) -> BoxFuture<'static, Result<Self::Output, Error>> {
+        async move { Ok(std::mem::replace(&mut *self.0.lock().await, Vec::default())) }.boxed()
     }
 }
 

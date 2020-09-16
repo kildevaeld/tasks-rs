@@ -1,5 +1,5 @@
 use crate::runtime;
-use crate::{Error, File, Reply, VinylStream};
+use crate::{Discard, Error, File, Reply, Vector, VinylStream};
 use futures_core::Stream;
 use futures_util::{
     future::BoxFuture, stream::BoxStream, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
@@ -22,36 +22,23 @@ impl Builder {
         S: Send + 'static + Stream,
         S::Item: Send + Future<Output = Result<R, Error>>,
         R: Reply + Send,
-        R::Future: Send,
+        R::Future: Send + 'static,
     {
         self.streams.push(
             stream
-                .map(|file| {
-                    async move {
-                        let file = file.await?;
-                        Ok(file.into_file().await?)
-                    }
-                    .boxed()
-                })
+                .map(|file| file.and_then(|file| file.into_file()).boxed())
                 .boxed(),
         );
         self
     }
 
-    pub async fn run(self) -> Vec<Result<File, Error>> {
-        self.into_stream().buffer_unordered(5).collect().await
+    pub async fn run(self) -> Result<Vec<Result<File, Error>>, Error> {
+        self.into_stream().write_to(Vector::default()).await
     }
 
     pub fn into_stream(
         self,
     ) -> impl Stream<Item = impl Future<Output = Result<File, Error>> + Send> + Send {
         futures_util::stream::select_all(self.streams)
-            .map(|next| async move { runtime::spawn(async move { next.await }).await })
-            .map(|ret| async move {
-                match ret.await {
-                    Ok(s) => s,
-                    Err(e) => Err(e),
-                }
-            })
     }
 }

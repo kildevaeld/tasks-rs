@@ -1,0 +1,14 @@
+[package]
+name = "band"
+version = "0.1.0"
+authors = ["Rasmus Kildevæld <rasmuskildevaeld@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tasks-vinyl = { path = "../tasks-vinyl" }
+tasks = { path = "../tasks" }
+futures-util = "0.3"
+slotmap = "0.4.0"
+itertools = "0.9"

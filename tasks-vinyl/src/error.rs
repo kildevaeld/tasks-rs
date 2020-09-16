@@ -7,6 +7,11 @@ pub enum Error {
     Io(io::Error),
     FileAlreadyExists,
     Other(Box<dyn StdError + Send>),
+    InvalidMimeType {
+        expected: mime::Mime,
+    },
+    #[cfg(feature = "tokio")]
+    Join(tokio::task::JoinError),
 }
 
 impl fmt::Display for Error {
@@ -20,5 +25,12 @@ impl StdError for Error {}
 impl From<io::Error> for Error {
     fn from(error: io::Error) -> Self {
         Self::Io(error)
+    }
+}
+
+#[cfg(feature = "tokio")]
+impl From<tokio::task::JoinError> for Error {
+    fn from(error: tokio::task::JoinError) -> Self {
+        Self::Join(error)
     }
 }
