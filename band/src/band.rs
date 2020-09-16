@@ -1,18 +1,19 @@
 use super::Error;
-use futures_util::future::{BoxFuture, FutureExt};
+use futures_util::future::{BoxFuture, FutureExt, TryFuture, TryFutureExt};
 use itertools::Itertools;
 use slotmap::{DefaultKey, DenseSlotMap, SecondaryMap};
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
 
 pub trait Action {
-    type Future: Future<Output = Result<(), Error>>;
+    type Future: Future<Output = Result<(), Self::Error>>;
+    type Error;
     fn call(&self) -> Self::Future;
 }
 
 pub struct TaskDesc {
     name: String,
-    action: Box<dyn Action<Future = BoxFuture<'static, Result<(), Error>>>>,
+    action: Box<dyn Action<Future = BoxFuture<'static, Result<(), Error>>, Error = Error>>,
     dependencies: Vec<String>,
 }
 
@@ -22,10 +23,12 @@ impl<A> Action for ActionBox<A>
 where
     A: Action,
     A::Future: Send + 'static,
+    <A::Future as TryFuture>::Error: Into<Error>,
 {
-    type Future = BoxFuture<'static, Result<(), Error>>;
+    type Future = BoxFuture<'static, Result<(), Self::Error>>;
+    type Error = Error;
     fn call(&self) -> Self::Future {
-        self.0.call().boxed()
+        self.0.call().err_into::<Error>().boxed()
     }
 }
 
@@ -34,7 +37,7 @@ fn resolve_task(
         DefaultKey,
         (
             String,
-            Box<dyn Action<Future = BoxFuture<'static, Result<(), Error>>>>,
+            Box<dyn Action<Future = BoxFuture<'static, Result<(), Error>>, Error = Error>>,
         ),
     >,
     map: &HashMap<DefaultKey, Vec<DefaultKey>>,
@@ -127,6 +130,7 @@ impl BandBuilder {
     where
         A: Action + 'static,
         A::Future: Send,
+        <A::Future as TryFuture>::Error: Into<Error>,
     {
         self.tasks.push(builder.build(name.to_string()));
         self
@@ -142,7 +146,7 @@ pub struct Band {
         DefaultKey,
         (
             String,
-            Box<dyn Action<Future = BoxFuture<'static, Result<(), Error>>>>,
+            Box<dyn Action<Future = BoxFuture<'static, Result<(), Error>>, Error = Error>>,
         ),
     >,
     dependencies: SecondaryMap<DefaultKey, Vec<DefaultKey>>,
@@ -190,6 +194,7 @@ impl<A> TaskBuilder<A>
 where
     A: Action + 'static,
     A::Future: Send,
+    <A::Future as TryFuture>::Error: Into<Error>,
 {
     pub fn new(action: A) -> TaskBuilder<A> {
         TaskBuilder {
@@ -212,6 +217,19 @@ where
     }
 }
 
+pub struct Task;
+
+impl Task {
+    pub fn new<A>(action: A) -> TaskBuilder<A>
+    where
+        A: Action + 'static,
+        A::Future: Send,
+        <A::Future as TryFuture>::Error: Into<Error>,
+    {
+        TaskBuilder::new(action)
+    }
+}
+
 #[cfg(test)]
 mod test {
 
@@ -220,6 +238,7 @@ mod test {
     struct Test;
     impl Action for Test {
         type Future = future::Ready<Result<(), Error>>;
+        type Error = Error;
         fn call(&self) -> Self::Future {
             future::ok(())
         }
@@ -227,12 +246,12 @@ mod test {
 
     #[test]
     fn test() {
-        let mut band = Band::new();
+        let band = Band::new();
 
         let band = band
             .add_task(
                 "main",
-                TaskBuilder::new(Test)
+                Task::new(Test)
                     // .add_dependency("clean")
                     .add_dependency("build"),
             )
