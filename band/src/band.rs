@@ -1,45 +1,54 @@
 use super::Error;
-use futures_util::future::{BoxFuture, FutureExt, TryFuture, TryFutureExt};
+use futures_util::future::{BoxFuture, FutureExt, TryFutureExt};
 use itertools::Itertools;
 use slotmap::{DefaultKey, DenseSlotMap, SecondaryMap};
 use std::collections::{HashMap, HashSet};
-use std::future::Future;
+use std::marker::PhantomData;
+use tasks::{Rejection, Task};
 
-pub trait Action {
-    type Future: Future<Output = Result<(), Self::Error>>;
-    type Error;
-    fn call(&self) -> Self::Future;
-}
+pub type Action<C> = Box<
+    dyn Task<
+        C,
+        Output = (C, ()),
+        Error = Error,
+        Future = BoxFuture<'static, Result<(C, ()), Rejection<C, Error>>>,
+    >,
+>;
 
-pub struct TaskDesc {
+pub struct TaskDesc<C> {
     name: String,
-    action: Box<dyn Action<Future = BoxFuture<'static, Result<(), Error>>, Error = Error>>,
+    action: Action<C>,
     dependencies: Vec<String>,
 }
 
-pub struct ActionBox<A>(A);
-
-impl<A> Action for ActionBox<A>
+pub struct ActionBox<A, C>(A, PhantomData<C>)
 where
-    A: Action,
+    A: Task<C, Output = (C, ())>;
+
+impl<A, C> Task<C> for ActionBox<A, C>
+where
+    A: Task<C, Output = (C, ())>,
     A::Future: Send + 'static,
-    <A::Future as TryFuture>::Error: Into<Error>,
+    A::Error: Into<Error>,
 {
-    type Future = BoxFuture<'static, Result<(), Self::Error>>;
+    type Future = BoxFuture<'static, Result<(C, ()), Rejection<C, Self::Error>>>;
     type Error = Error;
-    fn call(&self) -> Self::Future {
-        self.0.call().err_into::<Error>().boxed()
+    type Output = (C, ());
+
+    fn run(&self, ctx: C) -> Self::Future {
+        self.0
+            .run(ctx)
+            .map_err(|err| match err {
+                Rejection::Err(err) => Rejection::Err(err.into()),
+                Rejection::Reject(ctx, Some(err)) => Rejection::Reject(ctx, Some(err.into())),
+                Rejection::Reject(ctx, None) => Rejection::Reject(ctx, None),
+            })
+            .boxed()
     }
 }
 
-fn resolve_task(
-    tasks: &DenseSlotMap<
-        DefaultKey,
-        (
-            String,
-            Box<dyn Action<Future = BoxFuture<'static, Result<(), Error>>, Error = Error>>,
-        ),
-    >,
+fn resolve_task<C>(
+    tasks: &DenseSlotMap<DefaultKey, (String, Action<C>)>,
     map: &HashMap<DefaultKey, Vec<DefaultKey>>,
     root: &Vec<DefaultKey>,
     deps: &Vec<DefaultKey>,
@@ -79,7 +88,7 @@ fn resolve_task(
         .collect())
 }
 
-pub fn sort(input: Vec<TaskDesc>) -> Result<Band, Error> {
+pub fn sort<C>(input: Vec<TaskDesc<C>>) -> Result<Band<C>, Error> {
     let mut tasks = DenseSlotMap::default();
     let mut byname_tmp = HashMap::default();
     let mut pending = HashMap::<String, Vec<String>>::new();
@@ -87,8 +96,8 @@ pub fn sort(input: Vec<TaskDesc>) -> Result<Band, Error> {
     let mut byname = HashMap::new();
 
     for task in input.into_iter() {
-        let name = task.name; //.clone();
-        let deps = task.dependencies; //.clone(); //.iter().map(|_| None).collect();
+        let name = task.name;
+        let deps = task.dependencies;
         let t = tasks.insert((name.clone(), task.action));
         tmp.insert(name.clone(), t);
         pending.insert(name, deps);
@@ -121,50 +130,53 @@ pub fn sort(input: Vec<TaskDesc>) -> Result<Band, Error> {
     })
 }
 
-pub struct BandBuilder {
-    tasks: Vec<TaskDesc>,
+pub struct BandBuilder<C> {
+    tasks: Vec<TaskDesc<C>>,
 }
 
-impl BandBuilder {
-    pub fn add_task<A>(mut self, name: impl ToString, builder: TaskBuilder<A>) -> Self
+impl<C> BandBuilder<C> {
+    pub fn add_task<A>(mut self, name: impl ToString, builder: TaskBuilder<A, C>) -> Self
     where
-        A: Action + 'static,
+        A: Task<C, Output = (C, ())> + 'static,
         A::Future: Send,
-        <A::Future as TryFuture>::Error: Into<Error>,
+        A::Error: Into<Error>,
+        C: 'static,
     {
         self.tasks.push(builder.build(name.to_string()));
         self
     }
 
-    pub fn build(self) -> Result<Band, Error> {
+    pub fn build(self) -> Result<Band<C>, Error> {
         sort(self.tasks)
     }
 }
 
-pub struct Band {
-    tasks: DenseSlotMap<
-        DefaultKey,
-        (
-            String,
-            Box<dyn Action<Future = BoxFuture<'static, Result<(), Error>>, Error = Error>>,
-        ),
-    >,
+pub struct Band<C> {
+    tasks: DenseSlotMap<DefaultKey, (String, Action<C>)>,
     dependencies: SecondaryMap<DefaultKey, Vec<DefaultKey>>,
     tasks_by_name: HashMap<String, DefaultKey>,
 }
 
-impl Band {
-    pub fn new() -> BandBuilder {
+impl<C> Band<C> {
+    pub fn new() -> BandBuilder<C> {
         BandBuilder { tasks: Vec::new() }
     }
-    pub async fn run(&self, task: &str) -> Result<(), Error> {
+    pub async fn run(&self, task: &str, mut ctx: C) -> Result<(), Error> {
         let task = match self.tasks_by_name.get(task) {
             Some(s) => s,
             None => return Err(Error::TaskNotFound(task.to_owned())),
         };
 
         for dep in self.dependencies.get(*task).unwrap() {
-            self.tasks[*dep].1.call().await?;
+            let (c, _) = match self.tasks[*dep].1.run(ctx).await {
+                Ok(c) => c,
+                Err(err) => match err {
+                    Rejection::Err(err) => return Err(err),
+                    Rejection::Reject(_, Some(err)) => return Err(err),
+                    Rejection::Reject(_, None) => return Err(Error::Rejected),
+                },
+            };
+            ctx = c;
         }
 
         Ok(())
@@ -185,21 +197,27 @@ impl Band {
     }
 }
 
-pub struct TaskBuilder<A> {
+pub struct TaskBuilder<A, C>
+where
+    A: Task<C, Output = (C, ())>,
+{
     action: A,
     dependencies: Vec<String>,
+    _c: PhantomData<C>,
 }
 
-impl<A> TaskBuilder<A>
+impl<A, C> TaskBuilder<A, C>
 where
-    A: Action + 'static,
+    A: Task<C, Output = (C, ())> + 'static,
     A::Future: Send,
-    <A::Future as TryFuture>::Error: Into<Error>,
+    A::Error: Into<Error>,
+    C: 'static,
 {
-    pub fn new(action: A) -> TaskBuilder<A> {
+    pub fn new(action: A) -> TaskBuilder<A, C> {
         TaskBuilder {
             action,
             dependencies: Vec::new(),
+            _c: PhantomData,
         }
     }
 
@@ -208,25 +226,12 @@ where
         self
     }
 
-    fn build(self, name: String) -> TaskDesc {
+    fn build(self, name: String) -> TaskDesc<C> {
         TaskDesc {
             name,
-            action: Box::new(ActionBox(self.action)),
+            action: Box::new(ActionBox::<A, C>(self.action, PhantomData)),
             dependencies: self.dependencies,
         }
-    }
-}
-
-pub struct Task;
-
-impl Task {
-    pub fn new<A>(action: A) -> TaskBuilder<A>
-    where
-        A: Action + 'static,
-        A::Future: Send,
-        <A::Future as TryFuture>::Error: Into<Error>,
-    {
-        TaskBuilder::new(action)
     }
 }
 
@@ -235,12 +240,15 @@ mod test {
 
     use super::*;
     use futures_util::future;
+    use tasks::task;
+
     struct Test;
-    impl Action for Test {
-        type Future = future::Ready<Result<(), Error>>;
+    impl<C: Send> Task<C> for Test {
+        type Future = future::Ready<Result<(C, ()), Rejection<C, Error>>>;
         type Error = Error;
-        fn call(&self) -> Self::Future {
-            future::ok(())
+        type Output = (C, ());
+        fn run(&self, ctx: C) -> Self::Future {
+            future::ok((ctx, ()))
         }
     }
 
@@ -251,15 +259,17 @@ mod test {
         let band = band
             .add_task(
                 "main",
-                Task::new(Test)
+                TaskBuilder::new(Test)
                     // .add_dependency("clean")
                     .add_dependency("build"),
             )
             .add_task(
                 "build",
-                TaskBuilder::new(Test)
-                    // .add_dependency("clean")
-                    .add_dependency("build:sass"),
+                TaskBuilder::new(task!(|_| async move {
+                    Result::<_, Rejection<_, Error>>::Ok(((), ()))
+                }))
+                // .add_dependency("clean")
+                .add_dependency("build:sass"),
             )
             .add_task("clean", TaskBuilder::new(Test).add_dependency("clean:sass"))
             .add_task(
@@ -271,5 +281,7 @@ mod test {
             .unwrap();
 
         println!("TASKS {:?}", band.get_tasks("build"));
+
+        band.run("build", ());
     }
 }

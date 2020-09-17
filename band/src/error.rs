@@ -5,6 +5,7 @@ use std::fmt;
 pub enum Error {
     TaskNotFound(String),
     InvalidDepency(String),
+    Rejected,
     External(Box<dyn StdError + Send>),
 }
 
