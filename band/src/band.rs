@@ -3,6 +3,7 @@ use futures_util::future::{BoxFuture, FutureExt, TryFutureExt};
 use itertools::Itertools;
 use slotmap::{DefaultKey, DenseSlotMap, SecondaryMap};
 use std::collections::{HashMap, HashSet};
+use std::future::Future;
 use std::marker::PhantomData;
 use tasks::{Rejection, Task};
 
@@ -161,14 +162,14 @@ impl<C> Band<C> {
     pub fn new() -> BandBuilder<C> {
         BandBuilder { tasks: Vec::new() }
     }
-    pub async fn run(&self, task: &str, mut ctx: C) -> Result<(), Error> {
-        let task = match self.tasks_by_name.get(task) {
-            Some(s) => s,
-            None => return Err(Error::TaskNotFound(task.to_owned())),
-        };
+    pub async fn run(&self, task: &str, ctx: C) -> Result<(), Error> {
+        self.run_tasks(&[task], ctx).await
+    }
 
-        for dep in self.dependencies.get(*task).unwrap() {
-            let (c, _) = match self.tasks[*dep].1.run(ctx).await {
+    pub async fn run_tasks(&self, tasks: &[&str], mut ctx: C) -> Result<(), Error> {
+        let tasks = self.get_all_tasks(tasks)?;
+        for task in tasks {
+            let (c, _) = match self.tasks[task].1.run(ctx).await {
                 Ok(c) => c,
                 Err(err) => match err {
                     Rejection::Err(err) => return Err(err),
@@ -178,17 +179,42 @@ impl<C> Band<C> {
             };
             ctx = c;
         }
-
         Ok(())
     }
 
-    pub fn get_tasks(&self, task: &str) -> Option<Vec<&String>> {
-        let task = match self.tasks_by_name.get(task) {
-            Some(s) => s,
-            None => return None,
+    fn get_all_tasks(&self, tasks: &[&str]) -> Result<Vec<DefaultKey>, Error> {
+        let mut dependencies: Vec<DefaultKey> = Vec::new();
+        for task in tasks {
+            let task = match self.tasks_by_name.get(*task) {
+                Some(s) => s,
+                None => return Err(Error::TaskNotFound((*task).to_owned())),
+            };
+
+            dependencies.extend(self.dependencies[*task].iter());
+        }
+
+        let mut seen = HashSet::new();
+
+        Ok(dependencies
+            .into_iter()
+            .filter(|m| {
+                if seen.contains(m) {
+                    false
+                } else {
+                    seen.insert(*m);
+                    true
+                }
+            })
+            .collect())
+    }
+
+    pub fn get_tasks(&self, tasks: &[&str]) -> Option<Vec<&String>> {
+        let dependencies = match self.get_all_tasks(tasks) {
+            Ok(s) => s,
+            Err(_) => return None,
         };
 
-        let deps = self.dependencies[*task]
+        let deps = dependencies
             .iter()
             .map(|m| &self.tasks.get(*m).unwrap().0)
             .collect();
@@ -231,6 +257,32 @@ where
             name,
             action: Box::new(ActionBox::<A, C>(self.action, PhantomData)),
             dependencies: self.dependencies,
+        }
+    }
+}
+
+pub enum Dependency<T> {
+    Single(T),
+    Parallel(Vec<T>),
+}
+
+impl<T> Dependency<T> {
+    fn run<C: Clone>(
+        &self,
+        tasks: &DenseSlotMap<DefaultKey, (String, Action<C>)>,
+        ctx: C,
+    ) -> Result<impl Future + Send + 'static, Error> {
+        let v = match self {
+            Dependency::Single(s) => {
+                let action = match tasks.get(s){
+                    Some(s) => s,
+                    None => return Err(Error::Rejected)
+                };
+                action.1.run(ctx)
+            }, 
+            Dependency::Parallel(p) => {
+                
+            }
         }
     }
 }
@@ -280,7 +332,10 @@ mod test {
             .build()
             .unwrap();
 
-        println!("TASKS {:?}", band.get_tasks("build"));
+        println!(
+            "TASKS {:?}",
+            band.get_tasks(&["clean", "build", "build:sass"])
+        );
 
         band.run("build", ());
     }
