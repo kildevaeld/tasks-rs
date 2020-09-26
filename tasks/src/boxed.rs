@@ -10,6 +10,15 @@ where
     Box::new(BoxedTask(task))
 }
 
+pub fn boxtask_sync<I, O, E, T>(task: T) -> Box<dyn BoxedClonableTask<I, O, E> + Sync>
+where
+    T: Sized + 'static + Sync + Send + Task<I, Output = O, Error = E>,
+    T: Clone,
+    T::Future: 'static,
+{
+    Box::new(BoxedTask(task))
+}
+
 struct BoxedTask<T>(T);
 
 impl<T, R> Task<R> for BoxedTask<T>
