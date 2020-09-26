@@ -1,6 +1,6 @@
 use super::{
-    And, AndThen, Combine, Either, Extract, FilterPipe, Func, Map, Middleware, Or, Pipe, Reject,
-    Task, Tuple, Unify, Unroll,
+    boxtask, And, AndThen, BoxedClonableTask, Combine, Either, Extract, FilterPipe, Func, Map,
+    Middleware, Or, Pipe, Reject, Task, Tuple, Unify, Unroll,
 };
 use futures_core::TryFuture;
 
@@ -98,6 +98,14 @@ pub trait TaskExt<R>: Task<R> + Sized {
         T: Tuple,
     {
         Unify { filter: self }
+    }
+
+    fn boxed(self) -> Box<dyn BoxedClonableTask<R, Self::Output, Self::Error>>
+    where
+        Self: Clone + Send + 'static,
+        Self::Future: 'static,
+    {
+        boxtask(self)
     }
 }
 

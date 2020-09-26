@@ -4,6 +4,7 @@ mod macros;
 
 mod and;
 mod and_then;
+mod boxed;
 mod filter;
 mod filter_pipe;
 mod generic;
@@ -20,6 +21,6 @@ mod unroll;
 pub mod util;
 
 pub use self::{
-    and::*, and_then::*, filter::*, filter_pipe::*, generic::*, map::*, middleware::*, or::*,
-    pass::*, pipe::*, task::*, task_ext::*, task_state::*, unify::*, unroll::*,
+    and::*, and_then::*, boxed::*, filter::*, filter_pipe::*, generic::*, map::*, middleware::*,
+    or::*, pass::*, pipe::*, task::*, task_ext::*, task_state::*, unify::*, unroll::*,
 };
