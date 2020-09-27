@@ -48,7 +48,7 @@ impl Options {
 
 pub struct AssetRequest {
     pub(crate) path: String,
-    pub(crate) args: Option<Options>,
+    pub(crate) args: Options,
     pub(crate) extensions: Extensions,
 }
 
@@ -56,15 +56,23 @@ impl AssetRequest {
     pub fn new(path: impl ToString) -> AssetRequest {
         AssetRequest {
             path: path.to_string(),
-            args: None,
+            args: Options::default(),
             extensions: Extensions::new(),
         }
     }
 
     pub fn with_args<S: Serialize>(mut self, args: S) -> Result<Self, Error> {
         let value = serde_json::to_value(args).unwrap();
-        self.args = Some(Options(value));
+        self.args = Options(value);
         Ok(self)
+    }
+
+    pub fn args(&self) -> &Options {
+        &self.args
+    }
+
+    pub fn args_mut(&mut self) -> &mut Options {
+        &mut self.args
     }
 
     pub fn extensions(&self) -> &Extensions {
