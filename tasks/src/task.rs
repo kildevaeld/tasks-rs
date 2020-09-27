@@ -43,6 +43,10 @@ where
 
 impl<F, I, O, E> Copy for TaskFn<F, I, O, E> where F: Copy {}
 
+unsafe impl<F, I, O, E> Sync for TaskFn<F, I, O, E> where F: Sync {}
+
+unsafe impl<F, I, O, E> Send for TaskFn<F, I, O, E> where F: Send {}
+
 impl<F, I, O, E, U> TaskFn<F, I, O, E>
 where
     F: Fn(I) -> U,

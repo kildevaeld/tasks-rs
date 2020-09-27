@@ -13,7 +13,7 @@ use tasks_vinyl::{
 // use std::fs:
 pub fn dir(
     path: impl AsRef<Path>,
-) -> impl Task<AssetRequest, Output = AssetResponse, Error = Error> + Clone {
+) -> impl Task<AssetRequest, Output = AssetResponse, Error = Error> + Clone + Sync + Send {
     let path = path.as_ref().to_path_buf();
     task!(move |req: AssetRequest| {
         let path = path.join(req.path());
