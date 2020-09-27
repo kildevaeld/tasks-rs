@@ -11,12 +11,14 @@ use tasks::{Rejection, Task};
 use vfs_async::{Globber, OpenOptions, VFile, VPath, VFS};
 
 pub trait Reply {
-    type Future: Future<Output = Result<File, Error>>;
+    type Future: Future<Output = Result<File, Self::Error>>;
+    type Error;
     fn into_file(self) -> Self::Future;
 }
 
 impl Reply for File {
     type Future = futures_util::future::Ready<Result<File, Error>>;
+    type Error = Error;
     fn into_file(self) -> Self::Future {
         futures_util::future::ok(self)
     }
@@ -24,6 +26,7 @@ impl Reply for File {
 
 impl Reply for (File, ()) {
     type Future = futures_util::future::Ready<Result<File, Error>>;
+    type Error = Error;
     fn into_file(self) -> Self::Future {
         futures_util::future::ok(self.0)
     }

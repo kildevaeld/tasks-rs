@@ -21,7 +21,7 @@ impl Builder {
     where
         S: Send + 'static + Stream,
         S::Item: Send + Future<Output = Result<R, Error>>,
-        R: Reply + Send,
+        R: Reply<Error = Error> + Send,
         R::Future: Send + 'static,
     {
         self.streams.push(

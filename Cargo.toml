@@ -5,6 +5,7 @@ members = [
     # "tasks-core",
     #"tasks-http",
     "tasks-vinyl",
+    "tasks-assets",
     "willow",
     "band"
 ]
