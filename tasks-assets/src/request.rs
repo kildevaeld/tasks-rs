@@ -1,7 +1,9 @@
 use super::Extensions;
 use serde_json::{Map, Value};
+use serde::{Serialize, Deserialize}
 
-#[derive(Default)]
+#[derive(Default, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct Options(Map<String, Value>);
 
 pub struct AssetRequest {
