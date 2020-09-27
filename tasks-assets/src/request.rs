@@ -1,4 +1,5 @@
 use super::Extensions;
+use super::{AssetResponse, Node};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
@@ -27,5 +28,12 @@ impl AssetRequest {
 
     pub fn path_mut(&mut self) -> &mut String {
         &mut self.path
+    }
+
+    pub fn reply(self, node: Node) -> AssetResponse {
+        AssetResponse {
+            request: self,
+            node,
+        }
     }
 }
