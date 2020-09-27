@@ -1,9 +1,7 @@
 use async_trait::async_trait;
 use bytes::Bytes;
 
-pub struct CacheSetOptions {
-    ttl: 
-}
+pub struct CacheSetOptions {}
 
 #[async_trait]
 pub trait Cache<Key> {
