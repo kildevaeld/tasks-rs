@@ -5,9 +5,15 @@ use tasks_vinyl::filters;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let assets = Assets::new(cache::null(), sources::dir("."));
 
-    let resp = assets.run("tasks", Options::default()).await?;
+    tokio::spawn(async move {
+        let future = assets.run("tasks", Options::default());
 
-    println!("Node {:?}", resp.node());
+        let resp = future.await.unwrap();
+        // let resp = assets.run("tasks", Options::default()).await.unwrap();
+
+        println!("Node {:?}", resp.node());
+    })
+    .await?;
 
     Ok(())
 }

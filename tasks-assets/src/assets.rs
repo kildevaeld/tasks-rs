@@ -25,8 +25,9 @@ pub struct Assets<T, C> {
 
 impl<T, C> Assets<T, C>
 where
-    T: Task<AssetRequest, Output = AssetResponse, Error = Error>,
-    T::Future: 'static,
+    T: Task<AssetRequest, Output = AssetResponse, Error = Error> + Send,
+    C: Send,
+    T::Future: 'static + Send,
 {
     pub fn new(cache: C, task: T) -> Assets<T, C> {
         Assets { task, cache }

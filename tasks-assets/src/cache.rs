@@ -25,6 +25,6 @@ where
     async fn rm(&self, _key: Key) {}
 }
 
-pub fn null() -> NullCache {
+pub fn null() -> impl Cache<String> {
     NullCache
 }
