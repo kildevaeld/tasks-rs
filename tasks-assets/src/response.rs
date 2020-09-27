@@ -9,4 +9,8 @@ impl AssetResponse {
     pub fn node(&self) -> &Node {
         &self.node
     }
+
+    pub fn into_node(self) -> Node {
+        self.node
+    }
 }
