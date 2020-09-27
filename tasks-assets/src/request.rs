@@ -1,6 +1,6 @@
 use super::Extensions;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use serde::{Serialize, Deserialize}
 
 #[derive(Default, Serialize, Deserialize)]
 #[serde(transparent)]
