@@ -29,14 +29,17 @@ impl Content {
         }
     }
 
-    // pub async fn read(self) -> Result<Bytes, Error> {
-    //     let stream = self.into_stream().await?;
-    //     let data = stream.fold(BytesMut::new(), |prev, cur| {
-    //         prev.p
-    //     }).await;
+    pub async fn read(self) -> Result<Bytes, Error> {
+        let stream = self.into_stream().await?;
+        let data = stream
+            .try_fold(BytesMut::new(), |mut prev, cur| async move {
+                prev.extend(cur.to_vec());
+                Ok(prev)
+            })
+            .await?;
 
-    //     Ok(Bytes::from(data))
-    // }
+        Ok(Bytes::from(data))
+    }
 
     pub fn from_stream<S>(stream: S) -> Content
     where
@@ -65,7 +68,7 @@ impl From<&'static str> for Content {
 }
 
 impl From<()> for Content {
-    fn from(bytes: ()) -> Self {
+    fn from(_: ()) -> Self {
         Content::None
     }
 }

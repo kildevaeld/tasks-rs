@@ -55,7 +55,6 @@ pub fn dir(
                     })
                     .try_collect::<Vec<_>>()
                     .await
-                    // .map_err(|err)
                     .unwrap();
                 Node::Dir(Dir {
                     name: path

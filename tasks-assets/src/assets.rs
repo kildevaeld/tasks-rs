@@ -1,5 +1,8 @@
 use super::{AssetRequest, AssetResponse, Cache, Error, Extensions, Options, Transform};
-use futures_util::{future, FutureExt};
+use futures_util::{
+    future::{self, BoxFuture},
+    FutureExt,
+};
 use std::future::Future;
 use tasks::{Rejection, Task};
 use tasks_vinyl::File;
@@ -35,16 +38,9 @@ where
 
     pub fn get(
         &self,
-        path: impl ToString,
-        options: Options,
+        req: AssetRequest,
     ) -> impl Future<Output = Result<AssetResponse, Error>> + 'static + Send {
-        let assets = AssetRequest {
-            path: path.to_string(),
-            args: options,
-            extensions: Extensions::new(),
-        };
-
-        self.task.run(assets).then(|ret| match ret {
+        self.task.run(req).then(|ret| match ret {
             Ok(resp) => future::ok(resp),
             Err(Rejection::Err(err)) => future::err(err),
             Err(Rejection::Reject(_, Some(err))) => future::err(err),
@@ -65,12 +61,21 @@ where
 
 impl<T, C> Task<AssetRequest> for Assets<T, C>
 where
-    T: Task<AssetRequest>,
+    T: 'static + Task<AssetRequest, Output = AssetResponse, Error = Error> + Send,
+    C: Send + 'static,
+    T::Future: 'static + Send,
 {
-    type Output = T::Output;
-    type Error = T::Error;
-    type Future = T::Future;
+    type Output = AssetResponse;
+    type Error = Error;
+    type Future = BoxFuture<'static, Result<AssetResponse, Rejection<AssetRequest, Error>>>;
     fn run(&self, req: AssetRequest) -> Self::Future {
-        self.task.run(req)
+        self.get(req)
+            .then(|ret| async move {
+                match ret {
+                    Ok(ret) => Ok(ret),
+                    Err(err) => Err(Rejection::Err(err)),
+                }
+            })
+            .boxed()
     }
 }
