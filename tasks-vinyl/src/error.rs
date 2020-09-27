@@ -6,7 +6,7 @@ use std::io;
 pub enum Error {
     Io(io::Error),
     FileAlreadyExists,
-    Other(Box<dyn StdError + Send>),
+    Other(Box<dyn StdError + Send + Sync>),
     InvalidMimeType {
         expected: mime::Mime,
     },

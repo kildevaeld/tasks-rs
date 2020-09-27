@@ -1,10 +1,10 @@
 use crate::Error;
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 use futures_core::{
     future::BoxFuture,
     stream::{BoxStream, Stream},
 };
-use futures_util::stream::{self, StreamExt};
+use futures_util::stream::{self, StreamExt, TryStreamExt};
 use mime::Mime;
 use std::fmt;
 
@@ -28,6 +28,15 @@ impl Content {
             Content::None => Ok(stream::empty().boxed()),
         }
     }
+
+    // pub async fn read(self) -> Result<Bytes, Error> {
+    //     let stream = self.into_stream().await?;
+    //     let data = stream.fold(BytesMut::new(), |prev, cur| {
+    //         prev.p
+    //     }).await;
+
+    //     Ok(Bytes::from(data))
+    // }
 
     pub fn from_stream<S>(stream: S) -> Content
     where
