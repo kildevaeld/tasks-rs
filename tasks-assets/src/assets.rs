@@ -1,4 +1,6 @@
 use super::{AssetRequest, AssetResponse, Cache, Error, Extensions, Options, Transform};
+use futures_util::{future, FutureExt};
+use std::future::Future;
 use tasks::{Rejection, Task};
 use tasks_vinyl::File;
 
@@ -29,19 +31,23 @@ where
         Assets { task, cache }
     }
 
-    pub async fn run(&self, path: impl ToString, options: Options) -> Result<AssetResponse, Error> {
+    pub fn run(
+        &self,
+        path: impl ToString,
+        options: Options,
+    ) -> impl Future<Output = Result<AssetResponse, Error>> {
         let assets = AssetRequest {
             path: path.to_string(),
             args: options,
             extensions: Extensions::new(),
         };
 
-        match self.task.run(assets).await {
-            Ok(resp) => Ok(resp),
-            Err(Rejection::Err(err)) => Err(err),
-            Err(Rejection::Reject(_, Some(err))) => Err(err),
-            Err(Rejection::Reject(_, None)) => Err(Error::Unknown),
-        }
+        self.task.run(assets).then(|ret| match ret {
+            Ok(resp) => future::ok(resp),
+            Err(Rejection::Err(err)) => future::err(err),
+            Err(Rejection::Reject(_, Some(err))) => future::err(err),
+            Err(Rejection::Reject(_, None)) => future::err(Error::Unknown),
+        })
     }
 
     pub fn transform<T2>(self, transform: T2) -> Assets<Transform<T, T2>, C>

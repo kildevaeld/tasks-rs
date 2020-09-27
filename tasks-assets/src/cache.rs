@@ -4,7 +4,7 @@ use bytes::Bytes;
 pub struct CacheSetOptions {}
 
 #[async_trait]
-pub trait Cache<Key> {
+pub trait Cache<Key>: Sync + Send {
     async fn set(&self, key: Key, value: Bytes, options: CacheSetOptions);
     async fn get(&self, key: Key) -> Option<Bytes>;
     async fn rm(&self, key: Key);
