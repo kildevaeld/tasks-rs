@@ -33,7 +33,7 @@ where
         Assets { task, cache }
     }
 
-    pub fn run(
+    pub fn get(
         &self,
         path: impl ToString,
         options: Options,

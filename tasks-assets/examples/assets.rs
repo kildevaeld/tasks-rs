@@ -6,7 +6,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let assets = Assets::new(cache::null(), sources::dir("."));
 
     tokio::spawn(async move {
-        let future = assets.run("tasks", Options::default());
+        let future = assets.get("tasks", Options::default());
 
         let resp = future.await.unwrap();
         // let resp = assets.run("tasks", Options::default()).await.unwrap();
