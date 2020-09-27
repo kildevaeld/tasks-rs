@@ -26,6 +26,7 @@ pub struct Assets<T, C> {
 impl<T, C> Assets<T, C>
 where
     T: Task<AssetRequest, Output = AssetResponse, Error = Error>,
+    T::Future: 'static,
 {
     pub fn new(cache: C, task: T) -> Assets<T, C> {
         Assets { task, cache }
@@ -35,7 +36,7 @@ where
         &self,
         path: impl ToString,
         options: Options,
-    ) -> impl Future<Output = Result<AssetResponse, Error>> {
+    ) -> impl Future<Output = Result<AssetResponse, Error>> + 'static + Send {
         let assets = AssetRequest {
             path: path.to_string(),
             args: options,
