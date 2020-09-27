@@ -15,6 +15,7 @@ pub enum Node {
     Dir(Dir),
 }
 
+#[derive(Clone, Copy)]
 pub struct Assets<T, C> {
     task: T,
     cache: C,

@@ -10,6 +10,7 @@ pub trait Cache<Key> {
     async fn rm(&self, key: Key);
 }
 
+#[derive(Clone, Copy)]
 pub struct NullCache;
 
 #[async_trait]
