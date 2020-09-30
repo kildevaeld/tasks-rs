@@ -7,6 +7,8 @@ pub enum Error {
     Unknown,
     NotFound,
     Io(io::Error),
+    Custom(String),
+    Vinyl(tasks_vinyl::Error),
 }
 
 impl fmt::Display for Error {
@@ -20,5 +22,11 @@ impl StdError for Error {}
 impl From<io::Error> for Error {
     fn from(error: io::Error) -> Error {
         Error::Io(error)
+    }
+}
+
+impl From<tasks_vinyl::Error> for Error {
+    fn from(error: tasks_vinyl::Error) -> Self {
+        Error::Vinyl(error)
     }
 }

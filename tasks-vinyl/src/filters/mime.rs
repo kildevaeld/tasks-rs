@@ -6,6 +6,7 @@ pub fn match_exact(mime: Mime) -> impl Task<File, Output = (File, ()), Error = E
     task!(move |file: File| {
         let mime = mime.clone();
         async move {
+            println!("file {} {}", file.mime, mime);
             if file.mime == mime {
                 Ok((file, ()))
             } else {

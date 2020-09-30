@@ -21,16 +21,13 @@ where
             match ret {
                 Ok(ret) => {
                     let meta = ret.metadata().await?;
-                    // let content = ret.open(OpenOptions::new().read(true)).await?;
-                    // let stream = util::ByteStream::new(content).map_err(|e| e.into());
-                    Ok(File {
-                        path: ret.to_string().as_ref().to_owned(),
-                        // content: Content::Stream(Box::pin(stream)),
-                        content: Content::Ref(Box::new(PathOpener(ret.clone()))),
-                        size: meta.len(),
-                        mime: mime_guess::from_path(ret.file_name().unwrap_or(String::from("")))
+                    Ok(File::new(
+                        ret.to_string().as_ref().to_owned(),
+                        Content::Ref(Box::new(PathOpener(ret.clone()))),
+                        mime_guess::from_path(ret.file_name().unwrap_or(String::from("")))
                             .first_or_octet_stream(),
-                    })
+                        meta.len(),
+                    ))
                 }
                 Err(err) => Err(err),
             }

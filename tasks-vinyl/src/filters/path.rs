@@ -1,7 +1,7 @@
-use crate::{Error, File};
+use crate::{Error, File, Path};
 use tasks::{reject, task, Rejection, Task};
 
-pub fn get() -> impl Task<File, Output = (File, (String,)), Error = Error> + Copy {
+pub fn get() -> impl Task<File, Output = (File, (Path,)), Error = Error> + Copy {
     task!(|file: File| {
         let path = file.path.clone();
         futures_util::future::ok((file, (path,)))
@@ -9,9 +9,9 @@ pub fn get() -> impl Task<File, Output = (File, (String,)), Error = Error> + Cop
 }
 
 pub fn match_exact(
-    path: impl ToString,
+    path: impl Into<Path>,
 ) -> impl Task<File, Output = (File, ()), Error = Error> + Clone {
-    let path = path.to_string();
+    let path = path.into();
     task!(move |file: File| {
         let path = path.clone();
         async move {
@@ -35,7 +35,7 @@ pub fn match_ext(
     task!(move |file: File| {
         let ext = ext.clone();
         async move {
-            let real_ext = match pathutils::extname(&file.path) {
+            let real_ext = match file.path().ext() {
                 Some(ext) => ext,
                 None => reject!(file),
             };

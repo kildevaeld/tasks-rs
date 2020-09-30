@@ -31,13 +31,13 @@ pub trait VPathExt: VPath {
 
                     let content = path.open(OpenOptions::new().read(true)).await?;
                     let stream = ByteStream::new(content).map_err(|e| e.into());
-                    Ok(Some(File {
-                        path: path.to_string().as_ref().to_owned(),
-                        content: Content::Stream(Box::pin(stream)),
-                        size: meta.len(),
-                        mime: mime_guess::from_path(path.file_name().unwrap_or(String::from("")))
+                    Ok(Some(File::new(
+                        path.to_string().as_ref().to_owned(),
+                        Content::Stream(Box::pin(stream)),
+                        mime_guess::from_path(path.file_name().unwrap_or(String::from("")))
                             .first_or_octet_stream(),
-                    }))
+                        meta.len(),
+                    )))
                 })
                 .boxed())
         }
@@ -67,13 +67,14 @@ pub trait VPathExt: VPath {
 
                     let content = path.open(OpenOptions::new().read(true)).await?;
                     let stream = ByteStream::new(content).map_err(|e| e.into());
-                    Ok(Some(File {
-                        path: path.to_string().as_ref().to_owned(),
-                        content: Content::Stream(Box::pin(stream)),
-                        size: meta.len(),
-                        mime: mime_guess::from_path(path.file_name().unwrap_or(String::from("")))
+
+                    Ok(Some(File::new(
+                        path.to_string().as_ref().to_owned(),
+                        Content::Stream(Box::pin(stream)),
+                        mime_guess::from_path(path.file_name().unwrap_or(String::from("")))
                             .first_or_octet_stream(),
-                    }))
+                        meta.len(),
+                    )))
                 })
                 .boxed())
         }

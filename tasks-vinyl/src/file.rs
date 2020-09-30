@@ -1,10 +1,14 @@
-use crate::Error;
+use crate::{runtime, Error, Path};
 use bytes::{Bytes, BytesMut};
 use futures_core::{
     future::BoxFuture,
     stream::{BoxStream, Stream},
 };
-use futures_util::stream::{self, StreamExt, TryStreamExt};
+
+use futures_util::{
+    io::{AsyncWrite, AsyncWriteExt},
+    stream::{self, StreamExt, TryStreamExt},
+};
 use mime::Mime;
 use std::fmt;
 
@@ -81,7 +85,7 @@ impl fmt::Debug for Content {
 
 #[derive(Debug)]
 pub struct File {
-    pub path: String,
+    pub path: Path,
     pub content: Content,
     pub mime: Mime,
     pub size: u64,
@@ -89,16 +93,36 @@ pub struct File {
 
 impl File {
     pub fn new(
-        path: impl ToString,
+        path: impl Into<Path>,
         content: impl Into<Content>,
         mime: impl Into<Mime>,
         size: u64,
     ) -> File {
         File {
-            path: path.to_string(),
+            path: path.into(),
             content: content.into(),
             mime: mime.into(),
             size,
         }
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    pub fn path_mut(&mut self) -> &mut Path {
+        &mut self.path
+    }
+
+    pub async fn write_to<P: AsRef<std::path::Path>>(self, path: P) -> Result<(), Error> {
+        let mut file = runtime::create_file(path).await?;
+
+        let mut content = self.content.into_stream().await?;
+        while let Some(next) = content.next().await {
+            let next = next?;
+            file.write(&next).await?;
+        }
+
+        Ok(())
     }
 }

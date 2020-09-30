@@ -1,23 +1,24 @@
-use super::{Rejection, Task};
+use crate::{Rejection, Task};
 use futures_util::future::{BoxFuture, FutureExt};
 
-pub fn boxtask<I, O, E, T>(task: T) -> Box<dyn BoxedClonableTask<I, O, E>>
+pub trait DynamicTask<I, O, E>:
+    Task<I, Output = O, Error = E, Future = BoxFuture<'static, Result<O, Rejection<I, E>>>>
+    + Send
+    + Sync
+{
+    fn box_clone(&self) -> BoxTask<I, O, E>;
+}
+
+pub fn boxtask<I, O, E, T>(task: T) -> BoxTask<I, O, E>
 where
-    T: Sized + 'static + Send + Task<I, Output = O, Error = E>,
+    T: Sized + 'static + Send + Sync + Task<I, Output = O, Error = E>,
     T: Clone,
     T::Future: 'static,
 {
     Box::new(BoxedTask(task))
 }
 
-pub fn boxtask_sync<I, O, E, T>(task: T) -> Box<dyn BoxedClonableTask<I, O, E> + Sync>
-where
-    T: Sized + 'static + Sync + Send + Task<I, Output = O, Error = E>,
-    T: Clone,
-    T::Future: 'static,
-{
-    Box::new(BoxedTask(task))
-}
+pub type BoxTask<I, O, E> = Box<dyn DynamicTask<I, O, E>>;
 
 struct BoxedTask<T>(T);
 
@@ -35,23 +36,17 @@ where
     }
 }
 
-impl<T, R> BoxedClonableTask<R, T::Output, T::Error> for BoxedTask<T>
+impl<T, R> DynamicTask<R, T::Output, T::Error> for BoxedTask<T>
 where
-    T: Task<R> + Clone + 'static + Send,
+    T: Task<R> + Clone + 'static + Send + Sync,
     T::Future: 'static,
 {
-    fn box_clone(&self) -> Box<dyn BoxedClonableTask<R, T::Output, T::Error>> {
+    fn box_clone(&self) -> BoxTask<R, T::Output, T::Error> {
         boxtask(self.0.clone())
     }
 }
 
-pub trait BoxedClonableTask<I, O, E>:
-    Task<I, Output = O, Error = E, Future = BoxFuture<'static, Result<O, Rejection<I, E>>>> + Send
-{
-    fn box_clone(&self) -> Box<dyn BoxedClonableTask<I, O, E>>;
-}
-
-impl<I, O, E> Task<I> for Box<dyn BoxedClonableTask<I, O, E>> {
+impl<I, O, E> Task<I> for BoxTask<I, O, E> {
     type Output = O;
     type Error = E;
     #[allow(clippy::type_complexity)]
@@ -61,7 +56,7 @@ impl<I, O, E> Task<I> for Box<dyn BoxedClonableTask<I, O, E>> {
     }
 }
 
-impl<I, O, E> Clone for Box<dyn BoxedClonableTask<I, O, E>> {
+impl<I, O, E> Clone for BoxTask<I, O, E> {
     fn clone(&self) -> Self {
         self.as_ref().box_clone()
     }

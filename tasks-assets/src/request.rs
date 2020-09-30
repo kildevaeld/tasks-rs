@@ -1,7 +1,8 @@
-use super::{AssetResponse, Node};
+use super::{cache::CacheKey, AssetResponse, Node};
 use super::{Error, Extensions};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{Map, Value};
+use sha2::{Digest, Sha256};
 
 #[derive(Default, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -50,14 +51,24 @@ pub struct AssetRequest {
     pub(crate) path: String,
     pub(crate) args: Options,
     pub(crate) extensions: Extensions,
+    pub(crate) cache: bool,
 }
 
 impl AssetRequest {
-    pub fn new(path: impl ToString) -> AssetRequest {
+    pub fn new(path: impl AsRef<str>) -> AssetRequest {
+        let path = if path.as_ref().is_empty() {
+            "/".to_owned()
+        } else if path.as_ref().chars().nth(0) != Some('/') {
+            format!("/{}", path.as_ref())
+        } else {
+            path.as_ref().to_string()
+        };
+
         AssetRequest {
-            path: path.to_string(),
+            path: path,
             args: Options::default(),
             extensions: Extensions::new(),
+            cache: true,
         }
     }
 
@@ -97,4 +108,64 @@ impl AssetRequest {
             node,
         }
     }
+
+    pub(crate) fn cache_key(&self) -> Result<CacheKey, Box<dyn std::error::Error>> {
+        let mut key = self.path.as_bytes().to_vec();
+        if self.args.0 != Value::Null {
+            cache_key_value(&self.args.0, &mut key)?;
+        }
+        let key = Sha256::digest(&key);
+        Ok(CacheKey(key.as_slice().to_vec()))
+    }
+}
+
+fn cache_key_value(
+    value: &Value,
+    out: &mut dyn std::io::Write,
+) -> Result<(), Box<dyn std::error::Error>> {
+    match value {
+        Value::Array(a) => cache_key_array(a, out)?,
+        Value::Object(b) => cache_key_object(b, out)?,
+        _ => {
+            serde_json::to_writer(out, value)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn cache_key_array(
+    value: &Vec<Value>,
+    out: &mut dyn std::io::Write,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut v = Vec::new();
+    for i in value.iter() {
+        let mut t = Vec::new();
+        cache_key_value(i, &mut t)?;
+        v.push(t);
+    }
+
+    v.sort();
+
+    out.write_all(&mut v.concat())?;
+
+    Ok(())
+}
+
+fn cache_key_object(
+    value: &Map<String, Value>,
+    out: &mut dyn std::io::Write,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut list = Vec::new();
+    for (k, v) in value.iter() {
+        let mut t = k.as_bytes().to_vec();
+        cache_key_value(v, &mut t)?;
+        list.push(t);
+    }
+
+    list.sort();
+
+    out.write_all(&mut list.concat())?;
+
+    Ok(())
 }
