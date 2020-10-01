@@ -1,4 +1,4 @@
-// From warp
+// From warp https://github.com/seanmonstar/warp
 #[derive(Debug)]
 pub struct Product<H, T: HList>(pub(crate) H, pub(crate) T);
 

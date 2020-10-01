@@ -124,6 +124,7 @@ where
     type Output = Either<A::Output, B::Output>;
     type Error = A::Error;
     type Future = EitherFuture<A, B, R>;
+
     fn run(&self, req: R) -> Self::Future {
         match self {
             Either::A(a) => EitherFuture {
@@ -198,13 +199,3 @@ where
         }
     }
 }
-
-// impl<T, R> IntoTask<R> for T
-// where
-//     T: Task<R>,
-// {
-//     type Task = T;
-//     fn into_task(self) -> Self::Task {
-//         self
-//     }
-// }

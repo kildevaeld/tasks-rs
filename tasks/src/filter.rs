@@ -42,7 +42,6 @@ where
     F: Fn(&mut R) -> U,
     U: TryFuture,
     U::Ok: Tuple,
-    //U::Error: IsReject,
 {
     FilterFn { func }
 }
