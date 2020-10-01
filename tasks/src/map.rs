@@ -1,13 +1,9 @@
-use super::Extract;
+use crate::{Extract, Func, One, Rejection, Task};
 use futures_core::{ready, TryFuture};
+use pin_project::pin_project;
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-
-use crate::{Func, One};
-
-use crate::task::{Rejection, Task};
-use pin_project::pin_project;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Map<T, F> {

@@ -1,16 +1,11 @@
 use super::generic::Either;
+use super::Rejection;
 use futures_core::ready;
 use pin_project::pin_project;
 use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-
-#[derive(Debug, PartialEq)]
-pub enum Rejection<R, E> {
-    Err(E),
-    Reject(R, Option<E>),
-}
 
 pub trait Task<R> {
     type Output;
@@ -197,5 +192,22 @@ where
                 Err(e) => Poll::Ready(Err(e)),
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test(threaded_scheduler)]
+    async fn test_task() {
+        struct Error {}
+
+        let task = TaskFn::new(|req: ()| async move {
+            //
+            Result::<(), _>::Err(Error {}.into())
+        });
+
+        task.run(()).await;
     }
 }

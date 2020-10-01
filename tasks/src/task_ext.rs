@@ -131,7 +131,7 @@ mod test {
 
     #[test]
     fn test_task() {
-        let t = task!(|req: i32| async move { Result::<_, Rejection<i32, ()>>::Ok(req + 1) });
+        let t = task!(|req: i32| async move { Result::<_, _, ()>::Ok(req + 1) });
 
         let ret = futures::executor::block_on(t.run(1));
         assert_eq!(ret, Ok(2));
@@ -151,14 +151,14 @@ mod test {
             if req != 1 {
                 reject!(req);
             } else {
-                Result::<_, Rejection<_, ()>>::Ok(req + 1)
+                Result::<_, _, ()>::Ok(req + 1)
             }
         })
         .or(task!(|req| async move {
             if req != 2 {
                 reject!(req);
             }
-            Result::<_, Rejection<_, ()>>::Ok(req + 2)
+            Result::<_, _, ()>::Ok(req + 2)
         }))
         .or(task!(|req| async move { Ok(req + 3) }));
 
@@ -177,16 +177,14 @@ mod test {
 
     #[test]
     fn test_then() {
-        let t = task!(|req: i32| async move {
-            Result::<_, Rejection<i32, ()>>::Ok(format!("{}", req + 1))
-        })
-        .then(task!(|req: String| async move {
-            let p: i32 = req.parse().unwrap();
-            Result::<_, Rejection<_, ()>>::Ok(p + 1)
-        }))
-        .then(task!(|req: i32| async move {
-            Result::<_, Rejection<i32, ()>>::Ok(req + 1)
-        }));
+        let t = task!(|req: i32| async move { Result::<_, _, ()>::Ok(format!("{}", req + 1)) })
+            .then(task!(|req: String| async move {
+                let p: i32 = req.parse().unwrap();
+                Result::<_, _, ()>::Ok(p + 1)
+            }))
+            .then(task!(
+                |req: i32| async move { Result::<_, _, ()>::Ok(req + 1) }
+            ));
         // .then(task!(|req: i32| async move {
         //     Result::<_, Rejection<i32, ()>>::Ok(format!("{}", req))
         // }));
@@ -199,7 +197,7 @@ mod test {
     fn test_map() {
         let m = task!(|req: Person| async move {
             let name = req.name.clone();
-            Result::<_, Rejection<_, ()>>::Ok((req, (name,)))
+            Result::<_, _, ()>::Ok((req, (name,)))
         })
         // .and(task!(|req: Person| async move {
         //     let age = req.age;
