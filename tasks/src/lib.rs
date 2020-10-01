@@ -5,13 +5,12 @@ mod macros;
 mod and;
 mod and_then;
 mod boxed;
+mod error;
 mod filter;
 mod filter_pipe;
 mod generic;
 mod map;
 mod map_err;
-// mod map_rejection;
-mod error;
 mod middleware;
 mod or;
 mod pass;
@@ -21,9 +20,6 @@ mod task_ext;
 mod task_state;
 mod unify;
 mod unroll;
-// pub mod util;
-
-// mod boxed2;
 
 pub use self::{
     and::*, and_then::*, boxed::*, error::*, filter::*, filter_pipe::*, generic::*, map::*,
