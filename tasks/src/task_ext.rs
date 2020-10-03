@@ -1,8 +1,9 @@
 use super::{
     boxtask, And, AndThen, BoxTask, Combine, Either, Extract, FilterPipe, Func, Map, MapErr,
-    Middleware, Or, Pipe, Reject, Task, Tuple, Unify, Unroll,
+    Middleware, Or, Pipe, Reject, Rejection, Task, Tuple, Unify, Unroll,
 };
 use futures_core::TryFuture;
+use std::future::Future;
 
 pub trait TaskExt<R>: Task<R> + Sized {
     fn or<T: Task<R, Error = Self::Error>>(self, task: T) -> Or<Self, T> {
@@ -60,6 +61,19 @@ pub trait TaskExt<R>: Task<R> + Sized {
         F: Func<<Self::Output as Extract<R>>::Extract> + Clone,
         F::Output: TryFuture + Send,
         <F::Output as TryFuture>::Error: Into<Self::Error>,
+    {
+        AndThen {
+            filter: self,
+            callback: fun,
+        }
+    }
+
+    fn and_then_reject<F, V>(self, fun: F) -> AndThen<Self, F>
+    where
+        Self: Sized,
+        Self::Output: Extract<R>,
+        F: Func<<Self::Output as Extract<R>>::Extract> + Clone,
+        F::Output: Future<Output = Result<V, Rejection<R, Self::Error>>>,
     {
         AndThen {
             filter: self,
