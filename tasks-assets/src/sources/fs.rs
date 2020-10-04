@@ -11,9 +11,15 @@ use tasks_vinyl::{
 };
 // use std::fs:
 pub fn dir(
-    path: impl Into<Path>,
+    path: impl Into<std::path::PathBuf>,
 ) -> impl Task<AssetRequest, Output = AssetResponse, Error = Error> + Clone + Sync + Send {
-    let root = path.into();
+    let mut root = path.into();
+    if !root.is_absolute() {
+        root = root.canonicalize().unwrap();
+    }
+
+    let root = Path::new(root.to_str().unwrap().to_owned());
+
     task!(move |req: AssetRequest| {
         let root = root.clone();
         let path = root.join(req.path());
@@ -33,12 +39,16 @@ pub fn dir(
                     Err(err) => return Err(Rejection::Reject(req, Some(Error::Io(err)))),
                 };
 
+                let realpath = req.real_path();
+                let path = path.strip_prefix(&*root).unwrap().to_string();
+
                 let out = readdir
                     .and_then(move |next| {
                         let root = root.clone();
+                        let full_path = next.path();
+                        let path = full_path.to_str().unwrap().strip_prefix(&*root).unwrap();
+                        let path = pathutils::join(&realpath, &path);
                         async move {
-                            let full_path = next.path();
-                            let path = full_path.to_str().unwrap().replace(&*root, "");
                             let meta = rt::metadata(&full_path).await?;
                             let node = if meta.is_dir() {
                                 Node::Dir(Path::new(path))

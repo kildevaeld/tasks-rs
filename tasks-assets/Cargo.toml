@@ -19,6 +19,8 @@ mime = "0.3"
 serde = { version = "1", features = [ "derive" ] }
 sha2 = "0.9"
 async-mutex = "1"
+pathutils = { git = "https://github.com/kildevaeld/pathutils-rs" }
+
 
 [dev-dependencies]
 tokio = { version = "0.2", features = [ "full" ]}

@@ -14,16 +14,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .or(sources::dir("band"))
             .or(mount("/test", sources::dir("tasks-assets"))),
     )
-    .transform(
-        filters::mime::match_exact(Mime::from_str("text/x-toml").unwrap()).filter_pipe(task!(
-            |(mut file, ()): (File, ())| async move {
-                //
-                let name = file.path().filename().unwrap().to_owned();
-                file.path_mut().set_filename(format!("rapper-{}", name));
-                Ok(file)
-            }
-        )),
-    )
+    // .transform(
+    //     filters::mime::match_exact(Mime::from_str("text/x-toml").unwrap()).filter_pipe(task!(
+    //         |(mut file, ()): (File, ())| async move {
+    //             //
+    //             let name = file.path().filename().unwrap().to_owned();
+    //             file.path_mut().set_filename(format!("rapper-{}", name));
+    //             Ok(file)
+    //         }
+    //     )),
+    // )
     .build();
 
     tokio::spawn(async move {
