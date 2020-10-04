@@ -1,4 +1,4 @@
-use super::{AssetRequest, Extensions, Node};
+use super::{Asset, AssetRequest, Extensions};
 use tasks::{Either, One};
 
 pub trait Reply {
@@ -46,15 +46,15 @@ where
 
 pub struct AssetResponse {
     pub(crate) request: AssetRequest,
-    pub(crate) node: Node,
+    pub(crate) node: Asset,
 }
 
 impl AssetResponse {
-    pub fn node(&self) -> &Node {
+    pub fn node(&self) -> &Asset {
         &self.node
     }
 
-    pub fn into_node(self) -> Node {
+    pub fn into_node(self) -> Asset {
         self.node
     }
 }

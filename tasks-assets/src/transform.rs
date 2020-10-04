@@ -1,4 +1,4 @@
-use crate::{AssetRequest, AssetResponse, Error, Extensions, Node, Reply};
+use crate::{Asset, AssetRequest, AssetResponse, Error, Extensions, Reply};
 use futures_util::{future::TryFuture, ready};
 use pin_project::pin_project;
 use std::future::Future;
@@ -87,16 +87,16 @@ where
                             let ret = ret.into_response();
                             //
                             match ret.node {
-                                Node::Dir(dir) => {
+                                Asset::Dir(dir) => {
                                     self.set(TransformFuture {
                                         state: TransformFutureState::Done,
                                     });
                                     return Poll::Ready(Ok(AssetResponse {
                                         request: ret.request,
-                                        node: Node::Dir(dir),
+                                        node: Asset::Dir(dir),
                                     }));
                                 }
-                                Node::File(file) => {
+                                Asset::File(file) => {
                                     //
                                     Some(TransformFutureState::Transform(
                                         task.run(file),
@@ -142,7 +142,7 @@ where
                                 state: TransformFutureState::Done,
                             });
                             return Poll::Ready(Ok(AssetResponse {
-                                node: Node::File(file),
+                                node: Asset::File(file),
                                 request: exts,
                             }));
                         }

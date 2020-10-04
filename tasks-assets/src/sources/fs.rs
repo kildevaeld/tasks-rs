@@ -1,4 +1,4 @@
-use crate::{AssetRequest, AssetResponse, Error, Node, NodeFile};
+use crate::{Asset, AssetRequest, AssetResponse, Error, Node};
 use bytes::Bytes;
 use futures_util::{
     future::BoxFuture, stream::BoxStream, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
@@ -36,20 +36,17 @@ pub fn dir(
                 let out = readdir
                     .and_then(move |next| {
                         let root = root.clone();
-                        //
                         async move {
                             let full_path = next.path();
                             let path = full_path.to_str().unwrap().replace(&*root, "");
                             let meta = rt::metadata(&full_path).await?;
-                            // let node = if meta.is_dir() {
-                            //     Node::dir(path, Vec::default())
-                            // } else {
-                            //     let content = Content::Ref(Box::new(PathOpener(full_path, false)));
-                            //     let mime = from_path(&path).first_or_octet_stream();
-                            //     Node::File(File::new(path, content, mime, meta.size()))
-                            // };
-                            let mime = from_path(&path).first_or_octet_stream();
-                            let node = NodeFile::new(path, mime, meta.size());
+                            let node = if meta.is_dir() {
+                                Node::Dir(Path::new(path))
+                            } else {
+                                let mime = from_path(&path).first_or_octet_stream();
+                                Node::File(Path::new(path), mime, meta.size())
+                            };
+
                             Ok(node)
                         }
                     })
@@ -57,14 +54,14 @@ pub fn dir(
                     .await
                     .unwrap();
 
-                Node::dir(path, out)
+                Asset::dir(path, out)
             } else {
                 let content = Content::Ref(Box::new(PathOpener(
                     std::path::Path::new(&*path).to_path_buf(),
                     false,
                 )));
                 let mime = from_path(&*path).first_or_octet_stream();
-                Node::File(File::new(req.path(), content, mime, metadata.size()))
+                Asset::File(File::new(req.path(), content, mime, metadata.size()))
             };
 
             Ok(AssetResponse { request: req, node })

@@ -12,32 +12,38 @@ use std::sync::Arc;
 use tasks::{middleware, task, BoxTask, Middleware, Rejection, Task, TaskExt};
 use tasks_vinyl::{File, Path};
 
-#[derive(Debug)]
-pub struct NodeFile {
+// #[derive(Debug)]
+// pub struct NodeFile {
+//     pub path: Path,
+//     pub mime: Mime,
+//     pub size: u64,
+// }
+
+// impl NodeFile {
+//     pub fn new(path: impl Into<Path>, mime: impl Into<Mime>, size: u64) -> NodeFile {
+//         NodeFile {
+//             path: path.into(),
+//             mime: mime.into(),
+//             size: size,
+//         }
+//     }
+// }
+
+#[derive(Debug, PartialEq)]
+pub enum Node {
+    File(Path, Mime, u64),
+    Dir(Path),
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Dir {
+    pub children: Vec<Node>,
     pub path: Path,
-    pub mime: Mime,
-    pub size: u64,
 }
 
-impl NodeFile {
-    pub fn new(path: impl Into<Path>, mime: impl Into<Mime>, size: u64) -> NodeFile {
-        NodeFile {
-            path: path.into(),
-            mime: mime.into(),
-            size: size,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct NodeDir {
-    pub children: Vec<NodeFile>,
-    pub path: Path,
-}
-
-impl NodeDir {
-    pub fn new(path: impl Into<Path>, children: Vec<NodeFile>) -> NodeDir {
-        NodeDir {
+impl Dir {
+    pub fn new(path: impl Into<Path>, children: Vec<Node>) -> Dir {
+        Dir {
             path: path.into(),
             children,
         }
@@ -45,14 +51,14 @@ impl NodeDir {
 }
 
 #[derive(Debug)]
-pub enum Node {
+pub enum Asset {
     File(File),
-    Dir(NodeDir),
+    Dir(Dir),
 }
 
-impl Node {
-    pub fn dir(path: impl Into<Path>, children: Vec<NodeFile>) -> Node {
-        Node::Dir(NodeDir::new(path, children))
+impl Asset {
+    pub fn dir(path: impl Into<Path>, children: Vec<Node>) -> Asset {
+        Asset::Dir(Dir::new(path, children))
     }
 }
 
@@ -91,7 +97,7 @@ where
 
 #[derive(Clone)]
 pub struct Assets {
-    task: BoxTask<AssetRequest, Node, Error>,
+    task: BoxTask<AssetRequest, Asset, Error>,
 }
 
 impl Assets {
@@ -109,7 +115,7 @@ impl Assets {
     pub fn get(
         &self,
         req: AssetRequest,
-    ) -> impl Future<Output = Result<Node, Error>> + 'static + Send {
+    ) -> impl Future<Output = Result<Asset, Error>> + 'static + Send {
         self.task.run(req).then(|ret| match ret {
             Ok(resp) => future::ok(resp),
             Err(Rejection::Err(err)) => future::err(err),
@@ -120,9 +126,9 @@ impl Assets {
 }
 
 impl Task<AssetRequest> for Assets {
-    type Output = Node;
+    type Output = Asset;
     type Error = Error;
-    type Future = BoxFuture<'static, Result<Node, Rejection<AssetRequest, Error>>>;
+    type Future = BoxFuture<'static, Result<Asset, Rejection<AssetRequest, Error>>>;
     fn run(&self, req: AssetRequest) -> Self::Future {
         self.get(req)
             .then(|ret| async move {
@@ -140,7 +146,7 @@ fn entry_point<T, C>(
 ) -> impl Middleware<
     AssetRequest,
     T,
-    Task = impl Task<AssetRequest, Output = Node, Error = Error> + Send + Clone,
+    Task = impl Task<AssetRequest, Output = Asset, Error = Error> + Send + Clone,
 > + Clone
        + Send
 where
@@ -154,26 +160,24 @@ where
         //
         let cache = cache.clone();
         async move {
-            //
             let key = req.cache_key().unwrap();
 
             if let Some(file) = cache.get(&key).await {
-                Ok(Node::File(file))
+                Ok(Asset::File(file))
             } else {
                 let resp = task.run(req).await?.into_response();
                 let node = resp.into_node();
-                let node = if let Node::File(mut file) = node {
+                let node = if let Asset::File(mut file) = node {
                     cache
                         .set(&key, &mut file, CacheSetOptions {})
                         .await
                         .map_err(Rejection::Err)?;
-                    Node::File(file)
+                    Asset::File(file)
                 } else {
                     node
                 };
 
                 Ok(node)
-                // Ok(resp.into_response())
             }
         }
     })

@@ -1,4 +1,4 @@
-use super::{cache::CacheKey, AssetResponse, Node};
+use super::{cache::CacheKey, Asset, AssetResponse, MountPath};
 use super::{Error, Extensions};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -102,7 +102,7 @@ impl AssetRequest {
         &mut self.path
     }
 
-    pub fn reply(self, node: Node) -> AssetResponse {
+    pub fn reply(self, node: Asset) -> AssetResponse {
         AssetResponse {
             request: self,
             node,
@@ -116,6 +116,13 @@ impl AssetRequest {
         }
         let key = Sha256::digest(&key);
         Ok(CacheKey(key.as_slice().to_vec()))
+    }
+
+    pub fn real_path(&self) -> String {
+        match self.extensions.get::<MountPath>() {
+            Some(m) => m.real_path(self),
+            None => self.path.clone(),
+        }
     }
 }
 
