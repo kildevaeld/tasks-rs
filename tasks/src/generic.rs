@@ -1,6 +1,6 @@
 // From warp https://github.com/seanmonstar/warp
 #[derive(Debug)]
-pub struct Product<H, T: HList>(pub(crate) H, pub(crate) T);
+pub struct Product<H, T: HList>(pub H, pub T);
 
 pub type One<T> = (T,);
 
