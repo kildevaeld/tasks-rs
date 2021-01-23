@@ -29,11 +29,11 @@ mod tokio_impl {
             })
     }
 
-    #[cfg(feature = "time")]
-    pub async fn interval(duration: std::time::Duration) -> impl futures_core::Stream<Item = ()> {
-        use futures_util::StreamExt;
-        tokio::time::interval(duration).map(|_| ())
-    }
+    // #[cfg(feature = "time")]
+    // pub async fn interval(duration: std::time::Duration) -> impl futures_core::Stream<Item = ()> {
+    //     use futures_util::StreamExt;
+    //     tokio::time::interval(duration).map(|_| ())
+    // }
 }
 
 #[cfg(feature = "smol")]
