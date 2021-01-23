@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 futures-core = "0.3"
 futures-util = "0.3"
-tokio = { version = "0.2", features = [ "blocking", "stream", "time" ], optional = true }
+tokio = { version = "1", features = [ "rt", "time" ], optional = true }
 smol = { version = "1", optional = true }
 async-std = { version = "1", optional = true, features = [ "blocking", "unstable" ] }
 

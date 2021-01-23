@@ -166,7 +166,7 @@ dependencies = [
  "memchr",
  "num_cpus",
  "once_cell",
- "pin-project-lite",
+ "pin-project-lite 0.1.10",
  "pin-utils",
  "slab",
  "wasm-bindgen-futures",
@@ -479,7 +479,7 @@ dependencies = [
  "futures-io",
  "memchr",
  "parking",
- "pin-project-lite",
+ "pin-project-lite 0.1.10",
  "waker-fn",
 ]
 
@@ -850,6 +850,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e555d9e657502182ac97b539fb3dae8b79cda19e3e4f8ffb5e8de4f18df93c95"
 
 [[package]]
+name = "pin-project-lite"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "439697af366c49a6d0a010c56a0d97685bc140ce0d377b13a2ea2aa42d64a827"
+
+[[package]]
 name = "pin-utils"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -930,7 +936,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "smol",
- "tokio",
+ "tokio 1.1.0",
 ]
 
 [[package]]
@@ -1082,7 +1088,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "pin-project",
- "tokio",
+ "tokio 0.2.22",
 ]
 
 [[package]]
@@ -1102,7 +1108,7 @@ dependencies = [
  "sha2",
  "tasks",
  "tasks-vinyl",
- "tokio",
+ "tokio 0.2.22",
 ]
 
 [[package]]
@@ -1119,7 +1125,7 @@ dependencies = [
  "pathutils",
  "pin-project",
  "tasks",
- "tokio",
+ "tokio 0.2.22",
  "vfs-async",
 ]
 
@@ -1149,11 +1155,21 @@ dependencies = [
  "mio-named-pipes",
  "mio-uds",
  "num_cpus",
- "pin-project-lite",
+ "pin-project-lite 0.1.10",
  "signal-hook-registry",
  "slab",
  "tokio-macros",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "tokio"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8efab2086f17abcddb8f756117665c958feee6b2e39974c2f1600592ab3a4195"
+dependencies = [
+ "autocfg",
+ "pin-project-lite 0.2.4",
 ]
 
 [[package]]
@@ -1213,7 +1229,7 @@ dependencies = [
  "globset",
  "pathutils",
  "pin-project",
- "tokio",
+ "tokio 0.2.22",
 ]
 
 [[package]]
