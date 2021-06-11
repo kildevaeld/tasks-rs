@@ -1,5 +1,11 @@
-use crate::{Rejection, Task};
+use crate::{Middleware, Rejection, Task};
+use futures_core::ready;
 use futures_util::future::{BoxFuture, FutureExt};
+use pin_project::pin_project;
+use std::future::Future;
+use std::pin::Pin;
+use std::sync::Arc;
+use std::task::{Context, Poll};
 
 pub trait DynamicTask<I, O, E>:
     Task<I, Output = O, Error = E, Future = BoxFuture<'static, Result<O, Rejection<I, E>>>>
@@ -59,5 +65,119 @@ impl<I, O, E> Task<I> for BoxTask<I, O, E> {
 impl<I, O, E> Clone for BoxTask<I, O, E> {
     fn clone(&self) -> Self {
         self.as_ref().box_clone()
+    }
+}
+
+#[derive(Default)]
+pub struct BoxOrBuilder<I, O, E> {
+    task: Vec<BoxTask<I, O, E>>,
+}
+
+impl<I, O, E> BoxOrBuilder<I, O, E> {
+    pub fn push(&mut self, task: BoxTask<I, O, E>) {
+        self.task.push(task);
+    }
+
+    pub fn build(self) -> BoxOr<I, O, E> {
+        BoxOr {
+            task: Arc::new(self.task),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct BoxOr<I, O, E> {
+    task: Arc<Vec<BoxTask<I, O, E>>>,
+}
+
+impl<I, O, E> Task<I> for BoxOr<I, O, E>
+where
+    I: Send,
+{
+    type Output = O;
+    type Error = E;
+    type Future = BoxOrFuture<I, O, E>;
+    fn run(&self, req: I) -> Self::Future {
+        BoxOrFuture {
+            state: BoxOrFutureState::Init(Some(self.task.clone()), Some(req)),
+        }
+    }
+}
+
+#[pin_project(project = BoxOrFutureStateProj)]
+enum BoxOrFutureState<I, O, E> {
+    Init(Option<Arc<Vec<BoxTask<I, O, E>>>>, Option<I>),
+    Next(
+        Option<Arc<Vec<BoxTask<I, O, E>>>>,
+        #[pin] BoxFuture<'static, Result<O, Rejection<I, E>>>,
+        usize,
+    ),
+    Done,
+}
+
+#[pin_project]
+pub struct BoxOrFuture<I, O, E> {
+    #[pin]
+    state: BoxOrFutureState<I, O, E>,
+}
+
+impl<I, O, E> Future for BoxOrFuture<I, O, E> {
+    type Output = Result<O, Rejection<I, E>>;
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        loop {
+            let this = self.as_mut().project();
+            let state = match this.state.project() {
+                BoxOrFutureStateProj::Init(tasks, req) => {
+                    //
+                    let tasks = tasks.take().unwrap();
+                    let req = req.take().unwrap();
+                    let task = match tasks.get(0) {
+                        Some(s) => s,
+                        None => {
+                            self.set(BoxOrFuture {
+                                state: BoxOrFutureState::Done,
+                            });
+                            return Poll::Ready(Err(Rejection::Reject(req, None)));
+                        }
+                    };
+
+                    let future = task.run(req);
+                    Some(BoxOrFutureState::Next(Some(tasks), future, 1))
+                }
+                BoxOrFutureStateProj::Next(tasks, future, next) => {
+                    //
+                    match ready!(future.poll(cx)) {
+                        Ok(ret) => {
+                            self.set(BoxOrFuture {
+                                state: BoxOrFutureState::Done,
+                            });
+                            return Poll::Ready(Ok(ret));
+                        }
+                        Err(Rejection::Err(err)) => {
+                            self.set(BoxOrFuture {
+                                state: BoxOrFutureState::Done,
+                            });
+                            return Poll::Ready(Err(Rejection::Err(err)));
+                        }
+                        Err(Rejection::Reject(req, err)) => {
+                            let tasks = tasks.take().unwrap();
+
+                            let task = match tasks.get(*next) {
+                                Some(some) => some,
+                                None => return Poll::Ready(Err(Rejection::Reject(req, err))),
+                            };
+
+                            let future = task.run(req);
+                            Some(BoxOrFutureState::Next(Some(tasks), future, *next + 1))
+                        }
+                    }
+                }
+                BoxOrFutureStateProj::Done => None,
+            };
+
+            if let Some(state) = state {
+                self.set(BoxOrFuture { state });
+            }
+        }
     }
 }
