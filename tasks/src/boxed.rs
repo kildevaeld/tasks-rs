@@ -68,9 +68,16 @@ impl<I, O, E> Clone for BoxTask<I, O, E> {
     }
 }
 
-#[derive(Default)]
 pub struct BoxOrBuilder<I, O, E> {
     task: Vec<BoxTask<I, O, E>>,
+}
+
+impl<I, O, E> Default for BoxOrBuilder<I, O, E> {
+    fn default() -> Self {
+        BoxOrBuilder {
+            task: Vec::default(),
+        }
+    }
 }
 
 impl<I, O, E> BoxOrBuilder<I, O, E> {
@@ -85,11 +92,17 @@ impl<I, O, E> BoxOrBuilder<I, O, E> {
     }
 }
 
-#[derive(Clone)]
 pub struct BoxOr<I, O, E> {
     task: Arc<Vec<BoxTask<I, O, E>>>,
 }
 
+impl<I, O, E> Clone for BoxOr<I, O, E> {
+    fn clone(&self) -> Self {
+        BoxOr {
+            task: self.task.clone(),
+        }
+    }
+}
 impl<I, O, E> Task<I> for BoxOr<I, O, E>
 where
     I: Send,
