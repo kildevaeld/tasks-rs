@@ -1,5 +1,5 @@
 use core::fmt;
-#[cfg(feature = "alloc")]
+#[cfg(feature = "std")]
 use std::error::Error;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -21,7 +21,7 @@ where
     }
 }
 
-#[cfg(feature = "alloc")]
+#[cfg(feature = "std")]
 impl<T, U> Error for Either<T, U>
 where
     T: Error + 'static,

@@ -1,5 +1,5 @@
 use core::fmt;
-#[cfg(feature = "alloc")]
+#[cfg(feature = "std")]
 use std::error::Error;
 
 #[derive(Debug)]
@@ -23,7 +23,7 @@ where
     }
 }
 
-#[cfg(feature = "alloc")]
+#[cfg(feature = "std")]
 impl<R, E> Error for Rejection<R, E>
 where
     R: fmt::Debug,
@@ -38,7 +38,7 @@ where
     }
 }
 
-#[cfg(feature = "alloc")]
+#[cfg(feature = "std")]
 impl<R, E> From<E> for Rejection<R, E>
 where
     E: Error,

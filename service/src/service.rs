@@ -6,7 +6,7 @@ pub trait Service<R> {
     type Output;
     type Error;
     type Future: Future<Output = Result<Self::Output, Rejection<R, Self::Error>>>;
-    fn call(&mut self, req: R) -> Self::Future;
+    fn call(&self, req: R) -> Self::Future;
 }
 
 #[derive(Debug)]
@@ -60,7 +60,7 @@ where
     type Output = O;
     type Error = E;
     type Future = U;
-    fn call(&mut self, input: I) -> Self::Future {
+    fn call(&self, input: I) -> Self::Future {
         (self.f)(input)
     }
 }

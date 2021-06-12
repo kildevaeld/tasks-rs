@@ -29,7 +29,7 @@ where
     type Output = T::Output;
     type Error = E;
     type Future = ErrIntoFuture<T, E, R>;
-    fn call(&mut self, req: R) -> Self::Future {
+    fn call(&self, req: R) -> Self::Future {
         ErrIntoFuture {
             fut: self.task.call(req),
             _e: PhantomData,

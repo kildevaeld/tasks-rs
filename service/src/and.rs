@@ -38,7 +38,7 @@ where
     type Error = U::Error;
     type Future = AndFuture<R, T, U>;
 
-    fn call(&mut self, req: R) -> Self::Future {
+    fn call(& self, req: R) -> Self::Future {
         AndFuture {
             state: State::First(self.first.call(req), self.second.clone()),
         }

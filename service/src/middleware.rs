@@ -72,7 +72,7 @@ where
     type Error = E;
     type Future = U;
 
-    fn call(&mut self, req: R) -> Self::Future {
+    fn call(&self, req: R) -> Self::Future {
         (self.cb)(self.service.clone(), req)
     }
 }

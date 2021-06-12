@@ -21,7 +21,7 @@ where
     type Error = T::Error;
     type Future = MapFuture<T, F, R>;
     #[inline]
-    fn call(&mut self, req: R) -> Self::Future {
+    fn call(&self, req: R) -> Self::Future {
         MapFuture {
             extract: self.filter.call(req),
             callback: self.callback.clone(),

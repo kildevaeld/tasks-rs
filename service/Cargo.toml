@@ -11,6 +11,7 @@ futures-core = { version = "0.3", default-features = false }
 
 
 [features]
-default = ["std"]
+default = [ "alloc" ]
+# default = ["std"]
 std = ["alloc", "futures-core/std"  ]
 alloc = []

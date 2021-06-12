@@ -31,7 +31,7 @@ where
     type Output = T::Output;
     type Error = E;
     type Future = MapErrFuture<T, F, R>;
-    fn call(&mut self, req: R) -> Self::Future {
+    fn call(& self, req: R) -> Self::Future {
         MapErrFuture {
             fut: self.task.call(req),
             cb: self.cb.clone(),

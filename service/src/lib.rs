@@ -1,5 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
+#[cfg(feature = "alloc")]
+mod boxed;
 mod either;
 mod generic;
 mod macros;
@@ -29,6 +33,8 @@ pub use self::{
     service_ext::*,
     util::*,
 };
+#[cfg(feature = "alloc")]
+pub use boxed::*;
 
 #[cfg(test)]
 mod test {

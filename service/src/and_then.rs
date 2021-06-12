@@ -25,7 +25,7 @@ where
     type Error = T::Error;
     type Future = AndThenFuture<T, F, R>;
     #[inline]
-    fn call(&mut self, req: R) -> Self::Future {
+    fn call(&self, req: R) -> Self::Future {
         AndThenFuture {
             state: State::First(self.filter.call(req), self.callback.clone()),
         }

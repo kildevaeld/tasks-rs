@@ -17,7 +17,7 @@ where
     type Output = <T::Output as Extract<R>>::Extract;
     type Error = T::Error;
     type Future = UnpackFuture<T, R>;
-    fn call(&mut self, req: R) -> Self::Future {
+    fn call(&self, req: R) -> Self::Future {
         UnpackFuture {
             future: self.0.call(req),
         }

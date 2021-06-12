@@ -20,7 +20,7 @@ where
     type Error = F::Error;
     type Future = UnifyFuture<F::Future, R>;
     #[inline]
-    fn call(&mut self, req: R) -> Self::Future {
+    fn call(&self, req: R) -> Self::Future {
         UnifyFuture {
             inner: self.filter.call(req),
             _r: PhantomData,

@@ -26,7 +26,7 @@ where
     type Error = Either<T1::Error, T2::Error>;
     type Future = OrFuture<T1, T2, R>;
 
-    fn call(&mut self, req: R) -> Self::Future {
+    fn call(&self, req: R) -> Self::Future {
         OrFuture {
             state: OrFutureState::First(self.t1.call(req), self.t2.clone()),
         }

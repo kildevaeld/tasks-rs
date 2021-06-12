@@ -28,7 +28,7 @@ where
     type Error = T2::Error;
     type Future = AndThenRejectFuture<T1, T2, R>;
 
-    fn call(&mut self, req: R) -> Self::Future {
+    fn call(&self, req: R) -> Self::Future {
         AndThenRejectFuture::new(self.t1.call(req), self.t2.clone())
     }
 }
