@@ -1,6 +1,6 @@
 use super::{
     boxtask, And, AndThen, BoxTask, Combine, Either, Extract, FilterPipe, Func, Map, MapErr,
-    Middleware, Or, Pipe, Reject, Rejection, Task, Tuple, Unify, Unroll,
+    Middleware, Or, Pipe, Reject, Rejection, Task, Tuple, Unify, Unify2, Unroll,
 };
 use futures_core::TryFuture;
 use std::future::Future;
@@ -112,6 +112,13 @@ pub trait TaskExt<R>: Task<R> + Sized {
         T: Tuple,
     {
         Unify { filter: self }
+    }
+
+    fn unify2<T>(self) -> Unify2<Self>
+    where
+        Self: Task<R, Output = Either<T, T>> + Sized,
+    {
+        Unify2 { filter: self }
     }
 
     fn map_err<F, E>(self, cb: F) -> MapErr<Self, F, E>

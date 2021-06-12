@@ -1,4 +1,4 @@
-use crate::{Middleware, Rejection, Task};
+use crate::{Rejection, Task};
 use futures_core::ready;
 use futures_util::future::{BoxFuture, FutureExt};
 use pin_project::pin_project;

@@ -22,8 +22,10 @@ mod task_state;
 mod unify;
 mod unroll;
 
+mod unify2;
+
 pub use self::{
     and::*, and_then::*, and_then_reject::*, boxed::*, error::*, filter::*, filter_pipe::*,
     generic::*, map::*, map_err::*, middleware::*, or::*, pass::*, pipe::*, task::*, task_ext::*,
-    task_state::*, unify::*, unroll::*,
+    task_state::*, unify::*, unify2::*, unroll::*,
 };
