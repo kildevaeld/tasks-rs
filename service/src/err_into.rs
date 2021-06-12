@@ -24,7 +24,7 @@ impl<T, E> ErrInto<T, E> {
 impl<T, E, R> Service<R> for ErrInto<T, E>
 where
     T: Service<R>,
-    E: From<T::Error>,
+    E: From<T::Error> + Send,
 {
     type Output = T::Output;
     type Error = E;
