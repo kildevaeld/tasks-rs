@@ -1,10 +1,11 @@
+#[cfg(feature = "alloc")]
+use super::boxed::{box_service, BoxService};
 use super::{
     and::And, and_then::AndThen, and_then_reject::AndThenReject, err_into::ErrInto, map::Map,
-    map_err::MapErr, or::Or, unify::Unify, unpack::Unpack, Combine, Either, Extract, Func, Service,
-    Tuple,
+    map_err::MapErr, or::Or, unify::Unify, unpack::Unpack, Combine, Either, Extract, Func,
+    Middleware, Service, Tuple,
 };
 use futures_core::TryFuture;
-
 pub trait ServiceExt<R>: Service<R> + Sized {
     fn or<T: Service<R>>(self, task: T) -> Or<Self, T> {
         Or::new(self, task)
@@ -29,6 +30,22 @@ pub trait ServiceExt<R>: Service<R> + Sized {
         E: From<Self::Error>,
     {
         ErrInto::new(self)
+    }
+
+    fn with<M>(self, middleware: M) -> M::Service
+    where
+        Self: Sized,
+        M: Middleware<R, Self>,
+    {
+        middleware.wrap(self)
+    }
+
+    fn boxed(self) -> BoxService<R, Self::Output, Self::Error>
+    where
+        Self: Clone + Sync + Send + 'static,
+        Self::Future: 'static + Send,
+    {
+        box_service(self)
     }
 }
 
