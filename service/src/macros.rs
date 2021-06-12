@@ -48,3 +48,23 @@ macro_rules! or {
         }
      };
 }
+
+#[macro_export]
+macro_rules! or_unify {
+    [ $y: expr, $( $x:expr ),* ] => {
+        {
+            use $crate::{ServiceExt};
+            let m = $y;
+            $(
+                let m = m.or($x).unify();
+            )*
+            m
+        }
+     };
+
+     [ $y: expr] => {
+        {
+            $y
+        }
+     };
+}
