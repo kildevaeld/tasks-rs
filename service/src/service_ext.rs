@@ -1,6 +1,7 @@
 use super::{
     and::And, and_then::AndThen, and_then_reject::AndThenReject, err_into::ErrInto, map::Map,
-    map_err::MapErr, or::Or, unify::Unify, Combine, Either, Extract, Func, Service, Tuple,
+    map_err::MapErr, or::Or, unify::Unify, unpack::Unpack, Combine, Either, Extract, Func, Service,
+    Tuple,
 };
 use futures_core::TryFuture;
 
@@ -79,6 +80,14 @@ pub trait ServiceExtract<R>: Service<R> + Sized {
             first: self,
             second: other,
         }
+    }
+
+    fn unpack(self) -> Unpack<Self>
+    where
+        Self: Sized,
+        Self::Output: Extract<R>,
+    {
+        Unpack(self)
     }
 }
 

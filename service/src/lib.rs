@@ -8,6 +8,7 @@ mod middleware;
 mod rejection;
 mod service;
 mod service_ext;
+mod util;
 
 pub mod and;
 pub mod and_then;
@@ -16,6 +17,7 @@ pub mod err_into;
 pub mod map_err;
 pub mod or;
 pub mod unify;
+pub mod unpack;
 
 pub use self::{
     either::*,
@@ -25,6 +27,7 @@ pub use self::{
     rejection::*,
     service::*,
     service_ext::*,
+    util::*,
 };
 
 #[cfg(test)]
@@ -32,6 +35,8 @@ mod test {
     use super::*;
 
     struct Param {}
+
+    struct Error {}
 
     #[test]
     fn test_or() {
@@ -46,5 +51,10 @@ mod test {
             ServiceFn::<_, _, _, Param>::new(|test: Param| async move { Ok((test, (1000,))) });
 
         service.or(service2).unify();
+    }
+
+    #[test]
+    fn test_pass() {
+        let test = pass::<Param, Error>().map(|| 200).unpack();
     }
 }
