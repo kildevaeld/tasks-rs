@@ -36,6 +36,10 @@ pub use self::{
 #[cfg(feature = "alloc")]
 pub use boxed::*;
 
+pub mod prelude {
+    pub use super::{service, ServiceExt, ServiceExtract};
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

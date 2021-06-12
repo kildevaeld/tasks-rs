@@ -33,7 +33,7 @@ macro_rules! middleware {
 macro_rules! or {
     [ $y: expr, $( $x:expr ),* ] => {
         {
-            use $crate::TaskExt;
+            use $crate::ServiceExt;
             let m = $y;
             $(
                 let m = m.or($x);
