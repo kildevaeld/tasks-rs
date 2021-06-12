@@ -4,11 +4,9 @@ version = "0.1.0"
 authors = ["Rasmus Kildevæld <rasmuskildevaeld@gmail.com>"]
 edition = "2018"
 
-
 [dependencies]
 pin-project = "1"
 futures-core = { version = "0.3", default-features = false }
-
 
 [features]
 default = ["std"]
