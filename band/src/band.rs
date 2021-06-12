@@ -266,26 +266,25 @@ pub enum Dependency<T> {
     Parallel(Vec<T>),
 }
 
-impl<T> Dependency<T> {
-    fn run<C: Clone>(
-        &self,
-        tasks: &DenseSlotMap<DefaultKey, (String, Action<C>)>,
-        ctx: C,
-    ) -> Result<impl Future + Send + 'static, Error> {
-        let v = match self {
-            Dependency::Single(s) => {
-                let action = match tasks.get(s){
-                    Some(s) => s,
-                    None => return Err(Error::Rejected)
-                };
-                action.1.run(ctx)
-            }, 
-            Dependency::Parallel(p) => {
-                
-            }
-        }
-    }
-}
+// impl<T> Dependency<T> {
+//     fn run<C: Clone>(
+//         &self,
+//         tasks: &DenseSlotMap<DefaultKey, (String, Action<C>)>,
+//         ctx: C,
+//     ) -> Result<impl Future + Send + 'static, Error> {
+//         let v = match self {
+//             Dependency::Single(s) => {
+//                 let action = match tasks.get(s){
+//                     Some(s) => s,
+//                     None => return Err(Error::Rejected)
+//                 };
+//                 action.1.run(ctx)
+//             },
+//             Dependency::Parallel(p) => {
+//             }
+//         }
+//     }
+// }
 
 #[cfg(test)]
 mod test {

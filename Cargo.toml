@@ -4,6 +4,7 @@ members = [
     "tasks",
     "tasks-vinyl",
     "tasks-assets",
+    "service",
     "band",
     "runtime"
 ]
