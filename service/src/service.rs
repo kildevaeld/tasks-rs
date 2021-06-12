@@ -5,7 +5,7 @@ use core::marker::PhantomData;
 pub trait Service<R> {
     type Output;
     type Error;
-    type Future: Future<Output = Result<Self::Output, Rejection<R, Self::Error>>>;
+    type Future: Future<Output = Result<Self::Output, Rejection<R, Self::Error>>> + Send;
     fn call(&self, req: R) -> Self::Future;
 }
 
