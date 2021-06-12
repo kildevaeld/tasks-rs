@@ -58,7 +58,7 @@ macro_rules! or_unify {
             $(
                 let m = m.or($x).unify();
             )*
-            m
+            m.unify()
         }
      };
 
