@@ -1,7 +1,8 @@
 use super::{
-    and::And, err_into::ErrInto, map::Map, map_err::MapErr, or::Or, unify::Unify, Combine, Either,
-    Extract, Func, Service, Tuple,
+    and::And, and_then::AndThen, err_into::ErrInto, map::Map, map_err::MapErr, or::Or,
+    unify::Unify, Combine, Either, Extract, Func, Service, Tuple,
 };
+use futures_core::TryFuture;
 
 pub trait ServiceExt<R>: Service<R> + Sized {
     fn or<T: Service<R>>(self, task: T) -> Or<Self, T> {
@@ -31,6 +32,20 @@ pub trait ServiceExt<R>: Service<R> + Sized {
 }
 
 pub trait ServiceExtract<R>: Service<R> + Sized {
+    fn and_then<F>(self, fun: F) -> AndThen<Self, F>
+    where
+        Self: Sized,
+        Self::Output: Extract<R>,
+        F: Func<<Self::Output as Extract<R>>::Extract> + Clone,
+        F::Output: TryFuture + Send,
+        <F::Output as TryFuture>::Error: Into<Self::Error>,
+    {
+        AndThen {
+            filter: self,
+            callback: fun,
+        }
+    }
+
     fn map<F>(self, fun: F) -> Map<Self, F>
     where
         Self::Output: Extract<R>,

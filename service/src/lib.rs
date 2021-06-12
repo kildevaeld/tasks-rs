@@ -1,13 +1,15 @@
-pub mod and;
 mod either;
-pub mod err_into;
 mod generic;
 mod map;
-pub mod map_err;
-pub mod or;
 mod rejection;
 mod service;
 mod service_ext;
+
+pub mod and;
+pub mod and_then;
+pub mod err_into;
+pub mod map_err;
+pub mod or;
 pub mod unify;
 
 pub use self::{
