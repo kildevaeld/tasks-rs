@@ -1,6 +1,6 @@
 use super::{
-    and::And, and_then::AndThen, err_into::ErrInto, map::Map, map_err::MapErr, or::Or,
-    unify::Unify, Combine, Either, Extract, Func, Service, Tuple,
+    and::And, and_then::AndThen, and_then_reject::AndThenReject, err_into::ErrInto, map::Map,
+    map_err::MapErr, or::Or, unify::Unify, Combine, Either, Extract, Func, Service, Tuple,
 };
 use futures_core::TryFuture;
 
@@ -44,6 +44,15 @@ pub trait ServiceExtract<R>: Service<R> + Sized {
             filter: self,
             callback: fun,
         }
+    }
+
+    fn and_then_reject<F>(self, other: F) -> AndThenReject<Self, F>
+    where
+        Self: Sized,
+        Self::Output: Extract<R>,
+        F: Service<Self::Output>,
+    {
+        AndThenReject::new(self, other)
     }
 
     fn map<F>(self, fun: F) -> Map<Self, F>

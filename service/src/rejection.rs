@@ -1,6 +1,6 @@
+use core::fmt;
 #[cfg(feature = "alloc")]
 use std::error::Error;
-use std::fmt;
 
 #[derive(Debug)]
 pub enum Rejection<R, E> {
