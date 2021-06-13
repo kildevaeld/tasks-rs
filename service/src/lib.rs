@@ -20,7 +20,7 @@ pub mod and_then_reject;
 pub mod err_into;
 pub mod flatten;
 pub mod map_err;
-pub mod or;
+pub mod or_else;
 pub mod unify;
 pub mod unpack;
 
@@ -67,5 +67,12 @@ mod test {
     #[test]
     fn test_pass() {
         let test = pass::<Param, Error>().map(|| 200).unpack();
+    }
+
+    #[test]
+    fn test_flatten() {
+        let test = pass::<Param, Error>()
+            .map(|| 200)
+            .and(pass::<Param, Error>().map(|| false));
     }
 }
