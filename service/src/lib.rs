@@ -18,6 +18,7 @@ pub mod and;
 pub mod and_then;
 pub mod and_then_reject;
 pub mod err_into;
+pub mod flatten;
 pub mod map_err;
 pub mod or;
 pub mod unify;
@@ -25,7 +26,7 @@ pub mod unpack;
 
 pub use self::{
     either::*,
-    generic::{one, Combine, Extract, Func, One, Tuple},
+    generic::{one, Combine, Extract, Func, HList, One, Tuple},
     map::*,
     middleware::*,
     rejection::*,

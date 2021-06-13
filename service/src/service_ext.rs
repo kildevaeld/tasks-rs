@@ -1,9 +1,9 @@
 #[cfg(feature = "alloc")]
 use super::boxed::{box_service, BoxService};
 use super::{
-    and::And, and_then::AndThen, and_then_reject::AndThenReject, err_into::ErrInto, map::Map,
-    map_err::MapErr, or::Or, unify::Unify, unpack::Unpack, Combine, Either, Extract, Func,
-    Middleware, Service, Tuple,
+    and::And, and_then::AndThen, and_then_reject::AndThenReject, err_into::ErrInto,
+    flatten::Flatten, map::Map, map_err::MapErr, or::Or, unify::Unify, unpack::Unpack, Combine,
+    Either, Extract, Func, Middleware, Service, Tuple,
 };
 use futures_core::TryFuture;
 pub trait ServiceExt<R>: Service<R> + Sized {
@@ -105,6 +105,13 @@ pub trait ServiceExtract<R>: Service<R> + Sized {
         Self::Output: Extract<R>,
     {
         Unpack(self)
+    }
+
+    fn flatten(self) -> Flatten<Self>
+    where
+        Self::Output: Extract<R>,
+    {
+        Flatten::new(self)
     }
 }
 
