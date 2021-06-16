@@ -54,14 +54,14 @@ mod test {
         let service = ServiceFn::<_, _, _, Param>::new(|_: Param| async move { Ok(1000) });
         let service2 = ServiceFn::<_, _, _, Param>::new(|_: Param| async move { Ok(1000) });
 
-        service.or(service2).unify();
+        service.or_else(service2).unify();
 
         let service =
             ServiceFn::<_, _, _, Param>::new(|test: Param| async move { Ok((test, (1000,))) });
         let service2 =
             ServiceFn::<_, _, _, Param>::new(|test: Param| async move { Ok((test, (1000,))) });
 
-        service.or(service2).unify();
+        service.or_else(service2).unify();
     }
 
     #[test]

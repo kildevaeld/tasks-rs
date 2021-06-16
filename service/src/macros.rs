@@ -36,7 +36,7 @@ macro_rules! or {
             use $crate::ServiceExt;
             let m = $y;
             $(
-                let m = m.or($x);
+                let m = m.or_else($x);
             )*
             m
         }
@@ -56,7 +56,7 @@ macro_rules! or_unify {
             use $crate::{ServiceExt};
             let m = $y;
             $(
-                let m = m.or($x).unify();
+                let m = m.or_else($x).unify();
             )*
             m
         }
