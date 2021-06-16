@@ -20,7 +20,7 @@ impl<T1, T2> OrElse<T1, T2> {
 impl<T1, T2, R> Service<R> for OrElse<T1, T2>
 where
     T1: Service<R>,
-    T2: Send + Clone + Service<R, Error = <T1 as Service<R>>::Error>,
+    T2: Send + Clone + Service<R>,
 {
     type Output = Either<T1::Output, T2::Output>;
     type Error = Either<T1::Error, T2::Error>;
@@ -37,7 +37,7 @@ where
 enum OrElseFutureState<T1, T2, R>
 where
     T1: Service<R>,
-    T2: Service<R, Error = <T1 as Service<R>>::Error>,
+    T2: Service<R>,
 {
     First(#[pin] T1::Future, T2),
     Second(#[pin] T2::Future),
@@ -48,7 +48,7 @@ where
 pub struct OrElseFuture<T1, T2, R>
 where
     T1: Service<R>,
-    T2: Service<R, Error = <T1 as Service<R>>::Error>,
+    T2: Service<R>,
 {
     #[pin]
     state: OrElseFutureState<T1, T2, R>,
@@ -57,7 +57,7 @@ where
 impl<T1, T2, R> Future for OrElseFuture<T1, T2, R>
 where
     T1: Service<R>,
-    T2: Service<R, Error = <T1 as Service<R>>::Error>,
+    T2: Service<R>,
 {
     #[allow(clippy::type_complexity)]
     type Output =
@@ -90,7 +90,7 @@ where
                         self.set(OrElseFuture {
                             state: OrElseFutureState::Done,
                         });
-                        return Poll::Ready(Err(Rejection::Err(Either::A(err))));
+                        return Poll::Ready(Err(Rejection::Err(Either::B(err))));
                     }
                     Err(Rejection::Reject(req, Some(err))) => {
                         self.set(OrElseFuture {
