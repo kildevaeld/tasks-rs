@@ -21,6 +21,7 @@ pub mod err_into;
 pub mod flatten;
 pub mod map_err;
 pub mod or_else;
+pub mod then;
 pub mod unify;
 pub mod unpack;
 

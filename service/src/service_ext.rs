@@ -2,11 +2,15 @@
 use super::boxed::{box_service, BoxService};
 use super::{
     and::And, and_then::AndThen, and_then_reject::AndThenReject, err_into::ErrInto,
-    flatten::Flatten, map::Map, map_err::MapErr, or_else::OrElse, unify::Unify, unpack::Unpack,
-    Combine, Either, Extract, Func, Middleware, Service, Tuple,
+    flatten::Flatten, map::Map, map_err::MapErr, or_else::OrElse, then::Then, unify::Unify,
+    unpack::Unpack, Combine, Either, Extract, Func, Middleware, Service, Tuple,
 };
 use futures_core::TryFuture;
 pub trait ServiceExt<R>: Service<R> + Sized {
+    fn then<T: Service<Self::Output>>(self, task: T) -> Then<Self, T> {
+        Then::new(self, task)
+    }
+
     fn or_else<T: Service<R>>(self, task: T) -> OrElse<Self, T> {
         OrElse::new(self, task)
     }
