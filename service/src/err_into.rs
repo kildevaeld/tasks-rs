@@ -6,10 +6,18 @@ use core::task::{Context, Poll};
 use futures_core::ready;
 use pin_project::pin_project;
 
-#[derive(Clone)]
 pub struct ErrInto<T, E> {
     task: T,
     _e: PhantomData<E>,
+}
+
+impl<T: Clone, E> Clone ErrInto<T, E> {
+    fn clone(&self) -> ErrInto<T, E> {
+        ErrInto {
+            task:self.task.clone(),
+            _e: PhantomData
+        }
+    }
 }
 
 impl<T, E> ErrInto<T, E> {
