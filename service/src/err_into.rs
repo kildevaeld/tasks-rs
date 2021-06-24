@@ -11,11 +11,11 @@ pub struct ErrInto<T, E> {
     _e: PhantomData<E>,
 }
 
-impl<T: Clone, E> Clone ErrInto<T, E> {
+impl<T: Clone, E> Clone for ErrInto<T, E> {
     fn clone(&self) -> ErrInto<T, E> {
         ErrInto {
-            task:self.task.clone(),
-            _e: PhantomData
+            task: self.task.clone(),
+            _e: PhantomData,
         }
     }
 }
