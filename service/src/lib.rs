@@ -13,6 +13,7 @@ mod rejection;
 mod service;
 mod service_ext;
 mod util;
+pub mod vec;
 
 pub mod and;
 pub mod and_then;

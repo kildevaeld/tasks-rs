@@ -1,6 +1,5 @@
 use super::{Extract, HList, Rejection, Service, Tuple};
 use core::future::Future;
-use core::marker::PhantomData;
 use core::pin::Pin;
 use core::task::{Context, Poll};
 use futures_core::ready;
