@@ -64,3 +64,16 @@ where
         (self.f)(input)
     }
 }
+
+impl<F, I, O, E, U> Service<I> for F
+where
+    F: Fn(I) -> U,
+    U: Future<Output = Result<O, Rejection<I, E>>> + Send,
+{
+    type Output = O;
+    type Error = E;
+    type Future = U;
+    fn call(&self, input: I) -> Self::Future {
+        (self)(input)
+    }
+}
