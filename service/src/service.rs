@@ -1,6 +1,10 @@
 use super::Rejection;
 use core::future::Future;
 use core::marker::PhantomData;
+use core::pin::Pin;
+use core::task::{Context, Poll};
+use futures_core::ready;
+use pin_project::pin_project;
 
 pub trait Service<R> {
     type Output;
@@ -68,12 +72,36 @@ where
 impl<F, I, O, E, U> Service<I> for F
 where
     F: Fn(I) -> U,
-    U: Future<Output = Result<O, Rejection<I, E>>> + Send,
+    U: Future<Output = Result<O, E>> + Send,
 {
     type Output = O;
     type Error = E;
-    type Future = U;
+    type Future = FnServiceFuture<U, I, O, E>;
     fn call(&self, input: I) -> Self::Future {
-        (self)(input)
+        FnServiceFuture((self)(input), PhantomData)
     }
+}
+
+#[pin_project]
+pub struct FnServiceFuture<U, I, O, E>(#[pin] U, PhantomData<I>)
+where
+    U: Future<Output = Result<O, E>>;
+
+impl<U, I, O, E> Future for FnServiceFuture<U, I, O, E>
+where
+    U: Future<Output = Result<O, E>>,
+{
+    type Output = Result<O, Rejection<I, E>>;
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let this = self.project();
+        match ready!(this.0.poll(cx)) {
+            Ok(ret) => Poll::Ready(Ok(ret)),
+            Err(err) => Poll::Ready(Err(Rejection::Err(err))),
+        }
+    }
+}
+
+unsafe impl<U: Send, I, O, E> Send for FnServiceFuture<U, I, O, E> where
+    U: Future<Output = Result<O, E>>
+{
 }
