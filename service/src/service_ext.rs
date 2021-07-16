@@ -44,7 +44,7 @@ pub trait ServiceExt<R>: Service<R> + Sized {
         middleware.wrap(self)
     }
 
-    fn boxed(self) -> BoxService<R, Self::Output, Self::Error>
+    fn boxed(self) -> BoxService<'static, R, Self::Output, Self::Error>
     where
         Self: Clone + Sync + Send + 'static,
         Self::Future: 'static + Send,
