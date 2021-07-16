@@ -19,7 +19,7 @@ pub trait DynamicService<'a, I, O, E>:
 
 pub fn box_service<'a, I, O, E, T>(task: T) -> BoxService<'a, I, O, E>
 where
-    T: Sized + 'static + Send + Sync + Service<I, Output = O, Error = E>,
+    T: Sized + 'a + Send + Sync + Service<I, Output = O, Error = E>,
     T: Clone,
     T::Future: 'a + Send,
 {
@@ -46,7 +46,7 @@ where
 
 impl<'a, T, R> DynamicService<'a, R, T::Output, T::Error> for BoxedService<'a, T>
 where
-    T: Service<R> + Clone + 'static + Send + Sync,
+    T: Service<R> + Clone + 'a + Send + Sync,
     T::Future: 'a + Send,
 {
     fn box_clone(&self) -> BoxService<'a, R, T::Output, T::Error> {
