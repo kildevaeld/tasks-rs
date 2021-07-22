@@ -17,7 +17,7 @@ pub struct And<T, U> {
 
 impl<'a, T, U, R> Service<R> for And<T, U>
 where
-    R: Send + Sync,
+    // R: Send,
     T: Service<R>,
     T::Output: Extract<R> + Send,
     U: Service<R, Error = T::Error> + Clone + Send,
@@ -38,7 +38,7 @@ where
     type Error = U::Error;
     type Future = AndFuture<R, T, U>;
 
-    fn call(& self, req: R) -> Self::Future {
+    fn call(&self, req: R) -> Self::Future {
         AndFuture {
             state: State::First(self.first.call(req), self.second.clone()),
         }
