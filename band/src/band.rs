@@ -1,14 +1,14 @@
 use super::Error;
 use futures_util::future::{BoxFuture, FutureExt, TryFutureExt};
 use itertools::Itertools;
+use service::{Rejection, Service};
 use slotmap::{DefaultKey, DenseSlotMap, SecondaryMap};
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::marker::PhantomData;
-use tasks::{Rejection, Task};
 
 pub type Action<C> = Box<
-    dyn Task<
+    dyn Service<
         C,
         Output = (C, ()),
         Error = Error,
@@ -24,11 +24,11 @@ pub struct TaskDesc<C> {
 
 pub struct ActionBox<A, C>(A, PhantomData<C>)
 where
-    A: Task<C, Output = (C, ())>;
+    A: Service<C, Output = (C, ())>;
 
-impl<A, C> Task<C> for ActionBox<A, C>
+impl<A, C> Service<C> for ActionBox<A, C>
 where
-    A: Task<C, Output = (C, ())>,
+    A: Service<C, Output = (C, ())>,
     A::Future: Send + 'static,
     A::Error: Into<Error>,
 {
@@ -36,9 +36,9 @@ where
     type Error = Error;
     type Output = (C, ());
 
-    fn run(&self, ctx: C) -> Self::Future {
+    fn call(&self, ctx: C) -> Self::Future {
         self.0
-            .run(ctx)
+            .call(ctx)
             .map_err(|err| match err {
                 Rejection::Err(err) => Rejection::Err(err.into()),
                 Rejection::Reject(ctx, Some(err)) => Rejection::Reject(ctx, Some(err.into())),
@@ -139,7 +139,7 @@ pub struct BandBuilder<C, N = String> {
 impl<C, N> BandBuilder<C, N> {
     pub fn add_task<A>(mut self, name: impl Into<N>, builder: TaskBuilder<A, C>) -> Self
     where
-        A: Task<C, Output = (C, ())> + 'static,
+        A: Service<C, Output = (C, ())> + 'static,
         A::Future: Send,
         A::Error: Into<Error>,
         C: 'static,
@@ -170,7 +170,7 @@ impl<C> Band<C> {
     pub async fn run_tasks(&self, tasks: &[&str], mut ctx: C) -> Result<(), Error> {
         let tasks = self.get_all_tasks(tasks)?;
         for task in tasks {
-            let (c, _) = match self.tasks[task].1.run(ctx).await {
+            let (c, _) = match self.tasks[task].1.call(ctx).await {
                 Ok(c) => c,
                 Err(err) => match err {
                     Rejection::Err(err) => return Err(err),
@@ -226,7 +226,7 @@ impl<C> Band<C> {
 
 pub struct TaskBuilder<A, C>
 where
-    A: Task<C, Output = (C, ())>,
+    A: Service<C, Output = (C, ())>,
 {
     action: A,
     dependencies: Vec<String>,
@@ -235,7 +235,7 @@ where
 
 impl<A, C> TaskBuilder<A, C>
 where
-    A: Task<C, Output = (C, ())> + 'static,
+    A: Service<C, Output = (C, ())> + 'static,
     A::Future: Send,
     A::Error: Into<Error>,
     C: 'static,
@@ -292,14 +292,14 @@ mod test {
 
     use super::*;
     use futures_util::future;
-    use tasks::task;
+    use service::service;
 
     struct Test;
-    impl<C: Send> Task<C> for Test {
+    impl<C: Send> Service<C> for Test {
         type Future = future::Ready<Result<(C, ()), Rejection<C, Error>>>;
         type Error = Error;
         type Output = (C, ());
-        fn run(&self, ctx: C) -> Self::Future {
+        fn call(&self, ctx: C) -> Self::Future {
             future::ok((ctx, ()))
         }
     }
@@ -317,7 +317,7 @@ mod test {
             )
             .add_task(
                 "build",
-                TaskBuilder::new(task!(|_| async move {
+                TaskBuilder::new(service!(|_| async move {
                     Result::<_, Rejection<_, Error>>::Ok(((), ()))
                 }))
                 // .add_dependency("clean")
