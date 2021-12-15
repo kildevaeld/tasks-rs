@@ -1,4 +1,4 @@
-use crate::{Rejection, Service};
+use crate::{Middleware, Rejection, Service};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use core::future::Future;
 use core::pin::Pin;
@@ -9,14 +9,6 @@ use futures_core::ready;
 use pin_project::pin_project;
 use std::marker::PhantomData;
 
-pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + 'a + Send>>;
-
-pub trait DynamicService<'a, I, O, E>:
-    Service<I, Output = O, Error = E, Future = BoxFuture<'a, Result<O, Rejection<I, E>>>> + Send + Sync
-{
-    fn box_clone(&self) -> BoxService<'a, I, O, E>;
-}
-
 pub fn box_service<'a, I, O, E, T>(task: T) -> BoxService<'a, I, O, E>
 where
     T: Sized + 'a + Send + Sync + Service<I, Output = O, Error = E>,
@@ -24,6 +16,14 @@ where
     T::Future: 'a + Send,
 {
     Box::new(BoxedService(task, PhantomData))
+}
+
+pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + 'a + Send>>;
+
+pub trait DynamicService<'a, I, O, E>:
+    Service<I, Output = O, Error = E, Future = BoxFuture<'a, Result<O, Rejection<I, E>>>> + Send + Sync
+{
+    fn box_clone(&self) -> BoxService<'a, I, O, E>;
 }
 
 pub type BoxService<'a, I, O, E> = Box<dyn DynamicService<'a, I, O, E> + 'a>;
@@ -69,6 +69,52 @@ impl<'a, I, O, E> Clone for BoxService<'a, I, O, E> {
         self.as_ref().box_clone()
     }
 }
+
+// pub trait DynamicMiddleware<'a, S, I, O, E>:
+//     Middleware<I, S, Service = BoxService<'a, I, O, E>> + Send + Sync
+// where
+//     S: Service<I, Output = O, Error = E, Future = BoxFuture<'a, Result<O, Rejection<I, E>>>>,
+// {
+//     fn box_clone(&self) -> BoxMiddleware<'a, S, I, O, E>;
+// }
+
+// pub type BoxMiddleware<'a, S, I, O, E> = Box<dyn DynamicMiddleware<'a, S, I, O, E> + 'a>;
+
+// impl<'a, S, I, O, E> Middleware<I, S> for BoxMiddleware<'a, S, I, O, E>
+// where
+//     I: 'a,
+//     S: 'a + Service<I, Output = O, Error = E, Future = BoxFuture<'a, Result<O, Rejection<I, E>>>>,
+//     S::Future: 'a,
+//     E: 'a,
+//     O: 'a,
+// {
+//     type Service = BoxService<'a, I, O, E>;
+//     fn wrap(&self, req: S) -> Self::Service {
+//         box_service::<'a, I, O, E, _>(self.as_ref().wrap(req))
+//     }
+// }
+
+// impl<'a, S, I, O, E> Clone for BoxMiddleware<'a, S, I, O, E>
+// where
+//     S: Service<I, Output = O, Error = E, Future = BoxFuture<'a, Result<O, Rejection<I, E>>>>,
+// {
+//     fn clone(&self) -> Self {
+//         self.as_ref().box_clone()
+//     }
+// }
+
+// struct BoxedMiddleware<'a, M>(M, PhantomData<&'a ()>);
+
+// impl<'a, M, R, T> Middleware<R, T> for BoxedMiddleware<'a, M>
+// where
+//     T: Service<R>,
+//     T::Future: 'a + Send,
+// {
+//     type Service = BoxService<'a, R, T::Output, T::Error>;
+//     fn wrap(&self, req: R) -> Self::Service {
+//         Box::pin(self.0.call(req))
+//     }
+// }
 
 // pub struct BoxOrBuilder<I, O, E> {
 //     task: Vec<BoxService<I, O, E>>,

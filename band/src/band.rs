@@ -131,19 +131,20 @@ pub fn sort<C>(input: Vec<TaskDesc<C>>) -> Result<Band<C>, Error> {
     })
 }
 
-pub struct BandBuilder<C> {
+pub struct BandBuilder<C, N = String> {
     tasks: Vec<TaskDesc<C>>,
+    _n: std::marker::PhantomData<N>,
 }
 
-impl<C> BandBuilder<C> {
-    pub fn add_task<A>(mut self, name: impl ToString, builder: TaskBuilder<A, C>) -> Self
+impl<C, N> BandBuilder<C, N> {
+    pub fn add_task<A>(mut self, name: impl Into<N>, builder: TaskBuilder<A, C>) -> Self
     where
         A: Task<C, Output = (C, ())> + 'static,
         A::Future: Send,
         A::Error: Into<Error>,
         C: 'static,
     {
-        self.tasks.push(builder.build(name.to_string()));
+        self.tasks.push(builder.build(name.into()));
         self
     }
 

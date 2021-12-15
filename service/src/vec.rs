@@ -1,4 +1,4 @@
-use super::{Rejection, Service};
+use super::{Middleware, Rejection, Service};
 use alloc::{sync::Arc, vec::Vec};
 use futures_core::future::BoxFuture;
 
@@ -42,3 +42,7 @@ where
         Box::pin(fut)
     }
 }
+
+// pub struct MiddlewareStack<M> {
+//     stack: Arc<Vec<M>>,
+// }
