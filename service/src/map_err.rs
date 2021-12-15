@@ -6,11 +6,20 @@ use core::task::{Context, Poll};
 use futures_core::ready;
 use pin_project::pin_project;
 
-#[derive(Clone)]
 pub struct MapErr<T, F, E> {
     task: T,
     cb: F,
     _e: PhantomData<E>,
+}
+
+impl<T: Clone, F: Clone, E> Clone for MapErr<T, F, E> {
+    fn clone(&self) -> Self {
+        MapErr {
+            task: self.task.clone(),
+            cb: self.cb.clone(),
+            _e: PhantomData,
+        }
+    }
 }
 
 impl<T, F, E> MapErr<T, F, E> {
@@ -31,7 +40,7 @@ where
     type Output = T::Output;
     type Error = E;
     type Future = MapErrFuture<T, F, R>;
-    fn call(& self, req: R) -> Self::Future {
+    fn call(&self, req: R) -> Self::Future {
         MapErrFuture {
             fut: self.task.call(req),
             cb: self.cb.clone(),
