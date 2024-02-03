@@ -161,7 +161,10 @@ pub struct Band<C> {
 
 impl<C> Band<C> {
     pub fn new() -> BandBuilder<C> {
-        BandBuilder { tasks: Vec::new() }
+        BandBuilder {
+            tasks: Vec::new(),
+            _n: PhantomData,
+        }
     }
     pub async fn run(&self, task: &str, ctx: C) -> Result<(), Error> {
         self.run_tasks(&[task], ctx).await
@@ -253,7 +256,7 @@ where
         self
     }
 
-    fn build(self, name: String) -> TaskDesc<C> {
+    fn build<N>(self, name: N) -> TaskDesc<C> {
         TaskDesc {
             name,
             action: Box::new(ActionBox::<A, C>(self.action, PhantomData)),
